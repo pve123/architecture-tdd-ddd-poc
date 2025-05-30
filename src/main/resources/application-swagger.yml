@@ -1,0 +1,12 @@
+springdoc:
+  api-docs:
+    path: /v1/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  group-configs:
+    - group: member-api
+      paths-to-match:
+        - /v1/member/**
+    - group: admin-api
+      paths-to-match:
+        - /v1/admin/**

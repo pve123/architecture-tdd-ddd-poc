@@ -1,0 +1,18 @@
+spring:
+  config:
+    import:
+      - "application-swagger.yml"
+  profiles:
+    active: ${spring.profiles.active}
+    group:
+      local:
+        - db
+      test:
+        - db
+      unit:
+
+
+
+server:
+  port: 8099
+
