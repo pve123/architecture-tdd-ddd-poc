@@ -2,6 +2,7 @@ package com.example.demo.common.exception;
 
 
 import io.swagger.v3.oas.annotations.Hidden;
+import org.hibernate.TransientPropertyValueException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -38,6 +39,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
+        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+        return ResponseEntity
+                .status(httpStatus)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(TransientPropertyValueException.class)
+    public ResponseEntity<ErrorResponse> handleTransientPropertyValueException(TransientPropertyValueException e) {
         HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
         ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
         return ResponseEntity

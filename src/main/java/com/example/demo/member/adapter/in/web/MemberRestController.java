@@ -110,10 +110,7 @@ public class MemberRestController {
             responses = {
                     @ApiResponse(
                             description = "사용자 삭제 완료",
-                            responseCode = "200",
-                            content = {
-                                    @Content(schema = @Schema(implementation = CommonResponse.class)),
-                            }
+                            responseCode = "204"
                     ),
             }
     )
