@@ -118,12 +118,10 @@ public class MemberRestController {
             }
     )
     @DeleteMapping
-    @ResponseStatus(HttpStatus.OK)
-    public CommonResponse deleteMember(@Parameter(name = "id", description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-                                       @RequestParam String id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMember(@Parameter(name = "id", description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
+                             @RequestParam String id) {
         deleteMemberUseCase.deleteMember(id);
-        CommonResponse commonResponse = new CommonResponse<>("해당 사용자가 삭제됐습니다.", null);
-        return commonResponse;
     }
 
 }
