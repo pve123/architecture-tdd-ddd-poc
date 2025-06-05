@@ -9,12 +9,15 @@ import org.mapstruct.Mapper;
 @Mapper(componentModel = "spring")
 public interface MemberWebMapper {
 
-    // Request ↔ Domain
     Member toDomain(CreateMemberRequest createMemberRequest);
 
-    // Domain ↔ Response
     CreateMemberResponse toCreateMemberResponse(Member member);
 
-    // Domain ↔ Response
     GetMemberResponse toGetMemberResponse(Member member);
+
+    default Member toDomain(String memberId) {
+        return Member.builder()
+                .id(memberId)
+                .build();
+    }
 }

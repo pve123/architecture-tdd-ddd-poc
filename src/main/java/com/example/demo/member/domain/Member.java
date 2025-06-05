@@ -4,10 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
+
 
 @Builder(toBuilder = true)
 @Getter
-@Schema(description = "회원 정보 Domain")
+@Schema(description = "사용자 도메인")
 public class Member {
 
 
@@ -25,5 +27,9 @@ public class Member {
     private String phoneNumber;
     @Schema(description = "주소", example = "서울특별시 강남구 테헤란로 123")
     private String address;
+    @Schema(description = "생성일", example = "2025-01-01T15:55:55")
+    private LocalDateTime createdDateTime;
+    @Schema(description = "수정일", example = "2023-12-10T55:55:55")
+    private LocalDateTime lastModifiedDateTime;
 
 }

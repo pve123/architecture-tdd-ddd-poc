@@ -1,8 +1,10 @@
 package com.example.demo.member.adapter.out.persistence;
 
+import com.example.demo.board.adapter.out.persistence.BoardJpaEntity;
 import com.example.demo.common.jpa.BaseTimeEntity;
 import com.example.demo.member.domain.GenderEnum;
 import com.github.f4b6a3.ulid.UlidCreator;
+import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -10,6 +12,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "member")
@@ -41,9 +46,11 @@ public class MemberJpaEntity extends BaseTimeEntity {
     @Column(nullable = false, length = 200)
     @Schema(description = "주소", example = "서울특별시 강남구 테헤란로 123")
     private String address;
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BoardJpaEntity> boardList = Lists.newArrayList();
 
     @Builder(toBuilder = true)
-    public MemberJpaEntity(String id, String email, String password, String name, GenderEnum gender, String phoneNumber, String address) {
+    public MemberJpaEntity(String id, String email, String password, String name, GenderEnum gender, String phoneNumber, String address, List<BoardJpaEntity> boardList, LocalDateTime createdDateTime, LocalDateTime lastModifiedDateTime) {
         this.id = id;
         this.email = email;
         this.password = password;
@@ -51,6 +58,9 @@ public class MemberJpaEntity extends BaseTimeEntity {
         this.gender = gender;
         this.phoneNumber = phoneNumber;
         this.address = address;
+        this.boardList = boardList;
+        this.createdDateTime = createdDateTime;
+        this.lastModifiedDateTime = lastModifiedDateTime;
     }
 
     @PrePersist
