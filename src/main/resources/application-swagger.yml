@@ -4,9 +4,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
   group-configs:
-    - group: member-api
+    - group: 사용자
       paths-to-match:
         - /v1/member/**
-    - group: admin-api
+        - /v1/board/**
+    - group: 관리자
       paths-to-match:
         - /v1/admin/**

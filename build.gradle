@@ -52,6 +52,8 @@ dependencies {
     testImplementation 'org.testcontainers:mariadb'
     //Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    //guava
+    implementation 'com.google.guava:guava:33.1.0-jre'
 }
 
 tasks.named('test') {
