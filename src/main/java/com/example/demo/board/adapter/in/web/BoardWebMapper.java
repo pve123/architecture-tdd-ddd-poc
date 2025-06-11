@@ -23,7 +23,9 @@ public interface BoardWebMapper {
         return new CreateBoardResponse(
                 board.getTitle(),
                 board.getContent(),
-                member
+                member,
+                board.getCreatedAt(),
+                board.getUpdatedAt()
         );
     }
 

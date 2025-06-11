@@ -6,6 +6,8 @@ import com.example.demo.config.JpaAuditingConfiguration;
 import com.example.demo.config.test.TestContainerConfig;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,8 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
 
     @Autowired
     private MemberPersistenceAdapter memberPersistenceAdapter;
-
+    @PersistenceContext
+    private EntityManager entityManager;
     private Member member;
     private Member saveMember;
 
@@ -101,8 +104,10 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
     void 회원_삭제() {
 
         // when
-        memberPersistenceAdapter.deleteById(saveMember.getId());
-
+        memberPersistenceAdapter.softDeleteById(saveMember.getId());
+        entityManager.flush();
+        entityManager.clear();
+        // then
         assertAll(
                 () -> assertThatThrownBy(() -> memberPersistenceAdapter.findById(saveMember.getId()))
                         .isInstanceOf(BusinessException.class)

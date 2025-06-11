@@ -27,9 +27,13 @@ public class Member {
     private String phoneNumber;
     @Schema(description = "주소", example = "서울특별시 강남구 테헤란로 123")
     private String address;
+    @Schema(description = "삭제유무", example = "false", allowableValues = {"true", "false"})
+    private Boolean isDeleted;
+    @Schema(description = "삭제일", example = "2025-01-01T15:55:55")
+    private LocalDateTime deletedAt;
     @Schema(description = "생성일", example = "2025-01-01T15:55:55")
-    private LocalDateTime createdDateTime;
+    private LocalDateTime createdAt;
     @Schema(description = "수정일", example = "2023-12-10T55:55:55")
-    private LocalDateTime lastModifiedDateTime;
+    private LocalDateTime updatedAt;
 
 }

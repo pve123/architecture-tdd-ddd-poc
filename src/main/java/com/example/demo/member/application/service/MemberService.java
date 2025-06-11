@@ -45,6 +45,6 @@ public class MemberService implements CreateMemberUseCase, GetMemberUseCase, Del
 
     @Override
     public void deleteMember(String id) {
-        deleteMemberPort.deleteById(id);
+        deleteMemberPort.softDeleteById(id);
     }
 }
