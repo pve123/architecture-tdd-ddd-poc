@@ -21,6 +21,8 @@ public interface BoardPersistenceMapper {
         return Board.builder()
                 .title(boardJpaEntity.getTitle())
                 .content(boardJpaEntity.getContent())
+                .createdAt(boardJpaEntity.getCreatedAt())
+                .updatedAt(boardJpaEntity.getUpdatedAt())
                 .member(member)
                 .build();
     }

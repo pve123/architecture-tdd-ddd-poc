@@ -21,9 +21,9 @@ public record CreateMemberResponse(
         @Schema(description = "주소", example = "서울특별시 강남구 테헤란로 123")
         String address,
         @Schema(description = "생성일", example = "2025-01-01T15:55:55")
-        LocalDateTime createdDateTime,
+        LocalDateTime createdAt,
         @Schema(description = "수정일", example = "2023-12-10T55:55:55")
-        LocalDateTime lastModifiedDateTime
+        LocalDateTime updatedAt
 ) {
 
 

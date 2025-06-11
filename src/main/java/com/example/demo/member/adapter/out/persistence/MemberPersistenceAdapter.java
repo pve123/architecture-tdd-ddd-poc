@@ -51,7 +51,9 @@ public class MemberPersistenceAdapter implements CreateMemberPort, GetMemberPort
 
     @Override
     @Transactional
-    public void deleteById(String id) {
-        memberRepository.deleteById(id);
+    public void softDeleteById(String id) {
+        MemberJpaEntity memberJpaEntity = memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+        memberJpaEntity.softDeleted();
     }
 }

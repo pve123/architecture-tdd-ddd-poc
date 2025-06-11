@@ -132,7 +132,7 @@ public class MemberServiceTest extends UnitTestConfig {
     void 회원_삭제_성공() {
 
         //when
-        doNothing().when(deleteMemberPort).deleteById(eq(createMember.getId()));
+        doNothing().when(deleteMemberPort).softDeleteById(eq(createMember.getId()));
         memberService.deleteMember(createMember.getId());
         // 삭제 후 조회 시 예외 발생하도록 설정
         given(getMemberPort.findById(eq(createMember.getId())))
@@ -143,7 +143,7 @@ public class MemberServiceTest extends UnitTestConfig {
                         .isInstanceOf(BusinessException.class)
         );
 
-        verify(deleteMemberPort).deleteById(eq(createMember.getId()));
+        verify(deleteMemberPort).softDeleteById(eq(createMember.getId()));
         verify(getMemberPort).findById(eq(createMember.getId()));
     }
 }
