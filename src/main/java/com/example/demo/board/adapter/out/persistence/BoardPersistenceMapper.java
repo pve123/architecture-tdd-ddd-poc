@@ -19,6 +19,7 @@ public interface BoardPersistenceMapper {
 
     default Board toDomain(BoardJpaEntity boardJpaEntity, Member member) {
         return Board.builder()
+                .id(boardJpaEntity.getId())
                 .title(boardJpaEntity.getTitle())
                 .content(boardJpaEntity.getContent())
                 .createdAt(boardJpaEntity.getCreatedAt())

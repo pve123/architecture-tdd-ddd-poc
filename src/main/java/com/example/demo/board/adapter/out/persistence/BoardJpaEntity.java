@@ -1,6 +1,7 @@
 package com.example.demo.board.adapter.out.persistence;
 
 
+import com.example.demo.board.domain.Board;
 import com.example.demo.common.jpa.BaseTimeEntity;
 import com.example.demo.member.adapter.out.persistence.MemberJpaEntity;
 import com.github.f4b6a3.ulid.UlidCreator;
@@ -68,5 +69,10 @@ public class BoardJpaEntity extends BaseTimeEntity {
     public void generateId() {
         if (ObjectUtils.isEmpty(id)) this.id = UlidCreator.getUlid().toString();
         if (ObjectUtils.isEmpty(isDeleted)) this.isDeleted = Boolean.FALSE;
+    }
+
+    public void update(Board board) {
+        this.title = board.getTitle();
+        this.content = board.getContent();
     }
 }
