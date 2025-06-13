@@ -2,6 +2,7 @@ package com.example.demo.common.exception;
 
 
 import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.TransientPropertyValueException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +50,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TransientPropertyValueException.class)
     public ResponseEntity<ErrorResponse> handleTransientPropertyValueException(TransientPropertyValueException e) {
         HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
+        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+        return ResponseEntity
+                .status(httpStatus)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException e) {
+        HttpStatus httpStatus = HttpStatus.NOT_FOUND;
         ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
         return ResponseEntity
                 .status(httpStatus)

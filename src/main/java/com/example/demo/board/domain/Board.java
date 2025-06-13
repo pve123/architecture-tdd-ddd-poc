@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @Schema(description = "게시글 도메인")
 public class Board {
 
+    @Schema(description = "ULID 기반 식별자", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
+    private String id;
     @Schema(description = "제목", example = "가입인사")
     private String title;
     @Schema(description = "내용", example = "가입인사 작성합니다. 만나서 반갑습니다.")
