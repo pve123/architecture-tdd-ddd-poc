@@ -8,20 +8,21 @@ import com.example.demo.member.adapter.in.web.response.GetMemberResponse;
 import com.example.demo.member.application.port.in.CreateMemberUseCase;
 import com.example.demo.member.application.port.in.DeleteMemberUseCase;
 import com.example.demo.member.application.port.in.GetMemberUseCase;
+import com.example.demo.member.application.port.in.QueryMemberUseCase;
 import com.example.demo.member.domain.Member;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Tag(name = "사용자", description = "사용자 생성/조회/수정/삭제")
 @RestController
@@ -33,19 +34,26 @@ public class MemberRestController {
     private final GetMemberUseCase getMemberUseCase;
     private final DeleteMemberUseCase deleteMemberUseCase;
     private final MemberWebMapper memberWebMapper;
+    private final QueryMemberUseCase queryMemberUseCase;
 
     @Operation(
             summary = "사용자 생성",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
-                    content = @Content(schema = @Schema(implementation = CreateMemberRequest.class))
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CreateMemberRequest.class)
+                    )
             ),
             responses = {
                     @ApiResponse(
-                            description = "사용자 생성 완료",
                             responseCode = "201",
+                            description = "사용자 생성 완료",
                             content = {
-                                    @Content(schema = @Schema(implementation = CommonResponse.class)),
+                                    @Content(
+                                            mediaType = "application/json",
+                                            schema = @Schema(implementation = CommonResponse.class)
+                                    ),
                             }
                     ),
             }
@@ -60,14 +68,42 @@ public class MemberRestController {
         return commonResponse;
     }
 
+
+    @Operation(
+            summary = "사용자 목록 조회 (페이징)",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "사용자 목록 조회 (페이징) 완료",
+                            content = {
+                                    @Content(
+                                            mediaType = "application/json",
+                                            array = @ArraySchema(schema = @Schema(implementation = GetMemberResponse.class))
+                                    ),
+                            }
+                    ),
+            }
+    )
+    @GetMapping("/page")
+    @ResponseStatus(HttpStatus.OK)
+    public Page<GetMemberResponse> getAllMember(Pageable pageable) {
+
+        Page<Member> resultMembers = queryMemberUseCase.getMembers(pageable);
+        Page<GetMemberResponse> resultGetMemberResponses = resultMembers.map(memberWebMapper::toGetMemberResponse);
+        return resultGetMemberResponses;
+    }
+
     @Operation(
             summary = "사용자 조회",
             responses = {
                     @ApiResponse(
-                            description = "사용자 조회 완료",
                             responseCode = "200",
+                            description = "사용자 조회 완료",
                             content = {
-                                    @Content(schema = @Schema(implementation = GetMemberResponse.class)),
+                                    @Content(
+                                            mediaType = "application/json",
+                                            schema = @Schema(implementation = GetMemberResponse.class)
+                                    ),
                             }
                     ),
             }
@@ -81,36 +117,12 @@ public class MemberRestController {
         return getMemberResponse;
     }
 
-
-    @Operation(
-            summary = "사용자 목록",
-            responses = {
-                    @ApiResponse(
-                            description = "사용자 목록 조회 완료",
-                            responseCode = "200",
-                            content = {
-                                    @Content(schema = @Schema(implementation = GetMemberResponse.class)),
-                            }
-                    ),
-            }
-    )
-    @GetMapping("/all")
-    @ResponseStatus(HttpStatus.OK)
-    public List<GetMemberResponse> getAllMember() {
-        List<Member> memberList = getMemberUseCase.getAllMember();
-        List<GetMemberResponse> resultMemberList = memberList
-                .stream()
-                .map(item -> memberWebMapper.toGetMemberResponse(item))
-                .collect(Collectors.toUnmodifiableList());
-        return resultMemberList;
-    }
-
     @Operation(
             summary = "사용자 삭제",
             responses = {
                     @ApiResponse(
-                            description = "사용자 삭제 완료",
-                            responseCode = "204"
+                            responseCode = "204",
+                            description = "사용자 삭제 완료"
                     ),
             }
     )
