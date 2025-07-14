@@ -4,7 +4,7 @@ package com.example.demo.member.adapter.out.persistence;
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.config.JpaAuditingConfiguration;
 import com.example.demo.config.QuerydslConfig;
-import com.example.demo.config.test.TestContainerConfig;
+import com.example.demo.config.TestContainerConfig;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
 import jakarta.persistence.EntityManager;

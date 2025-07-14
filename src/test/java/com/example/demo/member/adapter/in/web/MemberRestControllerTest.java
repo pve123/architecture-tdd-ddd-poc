@@ -2,7 +2,7 @@ package com.example.demo.member.adapter.in.web;
 
 
 import com.example.demo.common.response.CommonResponse;
-import com.example.demo.config.test.TestContainerConfig;
+import com.example.demo.config.TestContainerConfig;
 import com.example.demo.member.adapter.in.web.request.CreateMemberRequest;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.domain.GenderEnum;
