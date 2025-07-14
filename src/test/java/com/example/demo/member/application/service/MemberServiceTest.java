@@ -7,6 +7,7 @@ import com.example.demo.config.unit.UnitTestConfig;
 import com.example.demo.member.application.port.out.CreateMemberPort;
 import com.example.demo.member.application.port.out.DeleteMemberPort;
 import com.example.demo.member.application.port.out.GetMemberPort;
+import com.example.demo.member.application.port.out.QueryMemberPort;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
 import com.github.f4b6a3.ulid.UlidCreator;
@@ -17,6 +18,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -40,6 +45,8 @@ public class MemberServiceTest extends UnitTestConfig {
     private GetMemberPort getMemberPort;
     @Mock
     private DeleteMemberPort deleteMemberPort;
+    @Mock
+    private QueryMemberPort queryMemberPort;
     @Mock
     private PasswordEncoder passwordEncoder;
     @InjectMocks
@@ -107,24 +114,27 @@ public class MemberServiceTest extends UnitTestConfig {
     }
 
     @Test
-    void 회원_목록_성공() {
+    void 회원_페이징_목록_조회_성공() {
 
         //when
-        given(getMemberPort.findAll()).willReturn(List.of(createMember));
-        List<Member> resultMemberList = memberService.getAllMember();
+        Pageable pageable = PageRequest.of(0, 10);
+        List<Member> memberList = List.of(createMember);
+        Page<Member> members = new PageImpl<>(memberList, pageable, memberList.size());
+        given(queryMemberPort.findAllByPage(pageable)).willReturn(members);
+        Page<Member> resultMemberList = memberService.getMembers(pageable);
         // then
         assertAll(
-                () -> assertThat(resultMemberList).isNotEmpty(),
-                () -> assertThat(resultMemberList.getFirst().getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getFirst().getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getFirst().getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getFirst().getName()),
-                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getFirst().getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getFirst().getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getFirst().getAddress())
+                () -> assertThat(resultMemberList.getContent()).isNotEmpty(),
+                () -> assertThat(resultMemberList.getContent().getFirst().getId()).isNotNull(),
+                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getContent().getFirst().getEmail()),
+                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getContent().getFirst().getPassword()),
+                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getContent().getFirst().getName()),
+                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getContent().getFirst().getGender()),
+                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getContent().getFirst().getPhoneNumber()),
+                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getContent().getFirst().getAddress())
         );
 
-        verify(getMemberPort).findAll();
+        verify(queryMemberPort).findAllByPage(pageable);
     }
 
 
