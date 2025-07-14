@@ -3,7 +3,7 @@ package com.example.demo.member.application.service;
 
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.common.exception.MemberErrorCodeEnum;
-import com.example.demo.config.unit.UnitTestConfig;
+import com.example.demo.config.test.TestDBConfig;
 import com.example.demo.member.application.port.out.CreateMemberPort;
 import com.example.demo.member.application.port.out.DeleteMemberPort;
 import com.example.demo.member.application.port.out.GetMemberPort;
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.verify;
 
 @DisplayName("Member UseCase Unit Test")
 @ExtendWith(MockitoExtension.class)
-public class MemberServiceTest extends UnitTestConfig {
+public class MemberServiceTest extends TestDBConfig {
 
     @Mock
     private CreateMemberPort createMemberPort;
