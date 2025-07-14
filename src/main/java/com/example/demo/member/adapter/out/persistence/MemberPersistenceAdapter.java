@@ -10,9 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 
 @Component
 @RequiredArgsConstructor
@@ -37,16 +34,6 @@ public class MemberPersistenceAdapter implements CreateMemberPort, GetMemberPort
                 .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
         Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
         return resultMember;
-    }
-
-    @Override
-    public List<Member> findAll() {
-        List<MemberJpaEntity> memberJpaEntityList = memberRepository.findAll();
-        List<Member> resultMemberList = memberJpaEntityList
-                .stream()
-                .map(item -> memberPersistenceMapper.toDomain(item))
-                .collect(Collectors.toUnmodifiableList());
-        return resultMemberList;
     }
 
     @Override
