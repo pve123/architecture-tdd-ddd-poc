@@ -1,4 +1,4 @@
-package com.example.demo.config.test;
+package com.example.demo.config;
 
 public class TestDBConfig {
     public static final String DB_NAME = System.getenv().getOrDefault("TEST_DB_NAME", "test");

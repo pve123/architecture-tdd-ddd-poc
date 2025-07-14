@@ -3,7 +3,7 @@ package com.example.demo.member.application.service;
 
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.common.exception.MemberErrorCodeEnum;
-import com.example.demo.config.test.TestDBConfig;
+import com.example.demo.config.TestDBConfig;
 import com.example.demo.member.application.port.out.CreateMemberPort;
 import com.example.demo.member.application.port.out.DeleteMemberPort;
 import com.example.demo.member.application.port.out.GetMemberPort;

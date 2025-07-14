@@ -1,4 +1,4 @@
-package com.example.demo.config.test;
+package com.example.demo.config;
 
 
 import org.springframework.test.context.ActiveProfiles;
