@@ -3,6 +3,7 @@ package com.example.demo.member.adapter.out.persistence;
 
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.config.JpaAuditingConfiguration;
+import com.example.demo.config.QuerydslConfig;
 import com.example.demo.config.test.TestContainerConfig;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
@@ -14,20 +15,30 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
-@Import({MemberPersistenceAdapter.class, MemberPersistenceMapperImpl.class, JpaAuditingConfiguration.class})
+@Import({
+        MemberPersistenceAdapter.class,
+        MemberQueryPersistenceAdapter.class,
+        MemberPersistenceMapperImpl.class,
+        JpaAuditingConfiguration.class,
+        QuerydslConfig.class
+
+})
 @DisplayName("Member JPA Persistence Integration Test")
 public class MemberPersistenceAdapterTest extends TestContainerConfig {
 
     @Autowired
     private MemberPersistenceAdapter memberPersistenceAdapter;
+    @Autowired
+    private MemberQueryPersistenceAdapter memberQueryPersistenceAdapter;
     @PersistenceContext
     private EntityManager entityManager;
     private Member member;
@@ -82,21 +93,22 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
     }
 
     @Test
-    void 회원_목록() {
+    void 회원_페이징_목록() {
 
         // when
-        List<Member> resultMemberList = memberPersistenceAdapter.findAll();
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Member> resultMemberList = memberQueryPersistenceAdapter.findAllByPage(pageable);
 
         // then
         assertAll(
-                () -> assertThat(resultMemberList).isNotEmpty(),
-                () -> assertThat(resultMemberList.getFirst().getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getFirst().getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getFirst().getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getFirst().getName()),
-                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getFirst().getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getFirst().getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getFirst().getAddress())
+                () -> assertThat(resultMemberList.getContent()).isNotEmpty(),
+                () -> assertThat(resultMemberList.getContent().getFirst().getId()).isNotNull(),
+                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getContent().getFirst().getEmail()),
+                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getContent().getFirst().getPassword()),
+                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getContent().getFirst().getName()),
+                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getContent().getFirst().getGender()),
+                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getContent().getFirst().getPhoneNumber()),
+                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getContent().getFirst().getAddress())
         );
     }
 
