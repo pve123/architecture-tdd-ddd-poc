@@ -4,6 +4,7 @@ package com.example.demo.member.adapter.in.web;
 import com.example.demo.common.response.CommonResponse;
 import com.example.demo.config.TestContainerConfig;
 import com.example.demo.member.adapter.in.web.request.CreateMemberRequest;
+import com.example.demo.member.adapter.in.web.request.UpdateMemberRequest;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.domain.GenderEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,8 +59,7 @@ public class MemberRestControllerTest extends TestContainerConfig {
                 .getResponse()
                 .getContentAsString();
 
-        CommonResponse commonResponse = objectMapper.readValue(responseBody, CommonResponse.class);
-        createMemberResponse = objectMapper.convertValue(commonResponse.data(), CreateMemberResponse.class);
+        createMemberResponse = objectMapper.readValue(responseBody, CreateMemberResponse.class);
     }
 
     @Test
@@ -110,6 +110,28 @@ public class MemberRestControllerTest extends TestContainerConfig {
                         .param("id", createMemberResponse.id())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNoContent());
+
+    }
+
+    @Test
+    void 회원_수정_API_통합_테스트() throws Exception {
+
+        //When & Then
+
+        UpdateMemberRequest request = new UpdateMemberRequest(
+                "user9@example.com",
+                "010-1234-9999",
+                "서울특별시 강남구 테헤란로 999"
+        );
+
+        mockMvc.perform(put("/v1/member/{id}", createMemberResponse.id())
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(createMemberResponse.id()))
+                .andExpect(jsonPath("$.email").value("user9@example.com"))
+                .andExpect(jsonPath("$.phoneNumber").value("010-1234-9999"))
+                .andExpect(jsonPath("$.address").value("서울특별시 강남구 테헤란로 999"));
 
     }
 
