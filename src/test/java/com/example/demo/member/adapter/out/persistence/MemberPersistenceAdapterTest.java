@@ -1,6 +1,7 @@
 package com.example.demo.member.adapter.out.persistence;
 
 
+import com.example.demo.board.domain.Board;
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.config.JpaAuditingConfiguration;
 import com.example.demo.config.QuerydslConfig;
@@ -123,6 +124,34 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
         assertAll(
                 () -> assertThatThrownBy(() -> memberPersistenceAdapter.findById(saveMember.getId()))
                         .isInstanceOf(BusinessException.class)
+        );
+    }
+
+    @Test
+    void 회원_수정() {
+
+        // when
+
+        Member updateMember = Member.builder()
+                .id(saveMember.getId())
+                .email("user333@example.com")
+                .phoneNumber("010-1234-3333")
+                .address("서울특별시 강남구 테헤란로 3333")
+                .build();
+
+        memberPersistenceAdapter.update(updateMember);
+        entityManager.flush();
+        entityManager.clear();
+
+        Member resultMember = memberPersistenceAdapter.findById(updateMember.getId());
+
+        // then
+        assertAll(
+                () -> assertThat(resultMember.getId()).isNotNull(),
+                () -> assertThat(resultMember.getId()).isEqualTo(updateMember.getId()),
+                () -> assertThat(resultMember.getEmail()).isEqualTo(updateMember.getEmail()),
+                () -> assertThat(resultMember.getPhoneNumber()).isEqualTo(updateMember.getPhoneNumber()),
+                () -> assertThat(resultMember.getAddress()).isEqualTo(updateMember.getAddress())
         );
     }
 }
