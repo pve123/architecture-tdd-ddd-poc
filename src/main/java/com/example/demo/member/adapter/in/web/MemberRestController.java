@@ -52,7 +52,7 @@ public class MemberRestController {
                             content = {
                                     @Content(
                                             mediaType = "application/json",
-                                            schema = @Schema(implementation = CommonResponse.class)
+                                            schema = @Schema(implementation = CreateMemberResponse.class)
                                     ),
                             }
                     ),
@@ -60,12 +60,11 @@ public class MemberRestController {
     )
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CommonResponse createMember(@Valid @RequestBody CreateMemberRequest createMemberRequest) {
+    public CreateMemberResponse createMember(@Valid @RequestBody CreateMemberRequest createMemberRequest) {
         Member member = memberWebMapper.toDomain(createMemberRequest);
         Member resultMember = createMemberUseCase.createMember(member);
         CreateMemberResponse createMemberResponse = memberWebMapper.toCreateMemberResponse(resultMember);
-        CommonResponse commonResponse = new CommonResponse<>("사용자 생성이 정상적으로 처리됐습니다", createMemberResponse);
-        return commonResponse;
+        return createMemberResponse;
     }
 
 
@@ -135,22 +134,34 @@ public class MemberRestController {
 
 
     @Operation(
-            summary = "사용자 정보 수정",
+            summary = "사용자 수정",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UpdateMemberRequest.class)
+                    )
+            ),
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "사용자 정보 수정 완료"
+                            description = "사용자 수정 완료",
+                            content = {
+                                    @Content(
+                                            mediaType = "application/json",
+                                            schema = @Schema(implementation = UpdateMemberResponse.class)
+                                    ),
+                            }
                     ),
             }
     )
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public CommonResponse updateMember(@Parameter(description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
+    public UpdateMemberResponse updateMember(@Parameter(description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
                              @Valid @RequestBody UpdateMemberRequest updateMemberRequest) {
         Member member = memberWebMapper.toDomain(id, updateMemberRequest);
         Member resultMember = updateMemberUseCase.updateMember(member);
         UpdateMemberResponse updateMemberResponse = memberWebMapper.toUpdateMemberResponse(resultMember);
-        CommonResponse commonResponse = new CommonResponse<>("사용자 수정이 정상적으로 처리됐습니다", updateMemberResponse);
-        return commonResponse;
+        return updateMemberResponse;
     }
 }
