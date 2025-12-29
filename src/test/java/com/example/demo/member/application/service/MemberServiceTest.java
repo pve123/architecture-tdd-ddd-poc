@@ -4,10 +4,7 @@ package com.example.demo.member.application.service;
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.common.exception.MemberErrorCodeEnum;
 import com.example.demo.config.TestDBConfig;
-import com.example.demo.member.application.port.out.CreateMemberPort;
-import com.example.demo.member.application.port.out.DeleteMemberPort;
-import com.example.demo.member.application.port.out.GetMemberPort;
-import com.example.demo.member.application.port.out.QueryMemberPort;
+import com.example.demo.member.application.port.out.*;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
 import com.github.f4b6a3.ulid.UlidCreator;
@@ -15,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,8 +30,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 
 @DisplayName("Member UseCase Unit Test")
@@ -45,6 +43,8 @@ public class MemberServiceTest extends TestDBConfig {
     private GetMemberPort getMemberPort;
     @Mock
     private DeleteMemberPort deleteMemberPort;
+    @Mock
+    private UpdateMemberPort updateMemberPort;
     @Mock
     private QueryMemberPort queryMemberPort;
     @Mock
@@ -82,78 +82,119 @@ public class MemberServiceTest extends TestDBConfig {
         // then
         assertAll(
                 () -> assertThat(createMember.getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(createMember.getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(createMember.getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(createMember.getName()),
-                () -> assertThat(member.getGender()).isEqualTo(createMember.getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(createMember.getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(createMember.getAddress())
+                () -> assertThat(createMember.getEmail()).isEqualTo(member.getEmail()),
+                () -> assertThat(createMember.getPassword()).isEqualTo(member.getPassword()),
+                () -> assertThat(createMember.getName()).isEqualTo(member.getName()),
+                () -> assertThat(createMember.getGender()).isEqualTo(member.getGender()),
+                () -> assertThat(createMember.getPhoneNumber()).isEqualTo(member.getPhoneNumber()),
+                () -> assertThat(createMember.getAddress()).isEqualTo(member.getAddress())
         );
 
-        verify(createMemberPort).save(any(Member.class));
+        ArgumentCaptor<Member> captor = ArgumentCaptor.forClass(Member.class);
+        verify(createMemberPort).save(captor.capture());
+
+        Member saved = captor.getValue();
+        assertAll(
+                () -> assertThat(saved.getEmail()).isEqualTo(member.getEmail()),
+                () -> assertThat(saved.getName()).isEqualTo(member.getName())
+        );
     }
 
     @Test
     void 회원_조회_성공() {
 
+        //given
+        given(getMemberPort.findById(eq(createMember.getId()))).willReturn(createMember);
         //when
-        given(getMemberPort.findById(anyString())).willReturn(createMember);
         Member resultMember = memberService.getMember(createMember.getId());
         // then
         assertAll(
                 () -> assertThat(resultMember.getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(resultMember.getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(resultMember.getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(resultMember.getName()),
-                () -> assertThat(member.getGender()).isEqualTo(resultMember.getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMember.getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(resultMember.getAddress())
+                () -> assertThat(resultMember.getEmail()).isEqualTo(member.getEmail()),
+                () -> assertThat(resultMember.getPassword()).isEqualTo(member.getPassword()),
+                () -> assertThat(resultMember.getName()).isEqualTo(member.getName()),
+                () -> assertThat(resultMember.getGender()).isEqualTo(member.getGender()),
+                () -> assertThat(resultMember.getPhoneNumber()).isEqualTo(member.getPhoneNumber()),
+                () -> assertThat(resultMember.getAddress()).isEqualTo(member.getAddress())
         );
 
-        verify(getMemberPort).findById(anyString());
+        verify(getMemberPort).findById(eq(createMember.getId()));
     }
 
     @Test
     void 회원_페이징_목록_조회_성공() {
 
-        //when
+        //given
         Pageable pageable = PageRequest.of(0, 10);
         List<Member> memberList = List.of(createMember);
         Page<Member> members = new PageImpl<>(memberList, pageable, memberList.size());
-        given(queryMemberPort.findAllByPage(pageable)).willReturn(members);
-        Page<Member> resultMemberList = memberService.getMembers(pageable);
+        given(queryMemberPort.findAllByPage(any(Pageable.class))).willReturn(members);
+
+
+        //when
+        Page<Member> result = memberService.getMembers(pageable);
+
         // then
         assertAll(
-                () -> assertThat(resultMemberList.getContent()).isNotEmpty(),
-                () -> assertThat(resultMemberList.getContent().getFirst().getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getContent().getFirst().getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getContent().getFirst().getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getContent().getFirst().getName()),
-                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getContent().getFirst().getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getContent().getFirst().getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getContent().getFirst().getAddress())
+                () -> assertThat(result.getContent()).hasSize(1),
+                () -> assertThat(result.getTotalElements()).isEqualTo(1),
+                () -> assertThat(result.getNumber()).isEqualTo(0),
+                () -> assertThat(result.getSize()).isEqualTo(10),
+                () -> assertThat(result.getContent().get(0).getId()).isEqualTo(createMember.getId()),
+                () -> assertThat(result.getContent().get(0).getEmail()).isEqualTo(createMember.getEmail()),
+                () -> assertThat(result.getContent().get(0).getName()).isEqualTo(createMember.getName())
         );
 
-        verify(queryMemberPort).findAllByPage(pageable);
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(queryMemberPort).findAllByPage(captor.capture());
+        assertAll(
+                () -> assertThat(captor.getValue().getPageNumber()).isEqualTo(0),
+                () -> assertThat(captor.getValue().getPageSize()).isEqualTo(10)
+        );
     }
 
 
     @Test
     void 회원_삭제_성공() {
 
-        //when
-        doNothing().when(deleteMemberPort).softDeleteById(eq(createMember.getId()));
+        // when
         memberService.deleteMember(createMember.getId());
-        // 삭제 후 조회 시 예외 발생하도록 설정
-        given(getMemberPort.findById(eq(createMember.getId())))
-                .willThrow(new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+
         // then
+        verify(deleteMemberPort).softDeleteById(eq(createMember.getId()));
+    }
+
+    @Test
+    void 회원_수정_성공() {
+
+        //given
+        Member updateRequest = createMember.toBuilder()
+                .email("user77@example.com")
+                .phoneNumber("010-1234-5677")
+                .address("서울특별시 강남구 테헤란로 77")
+                .build();
+
+        given(updateMemberPort.update(any(Member.class))).willReturn(updateRequest);
+
+        // when
+        Member result = memberService.updateMember(updateRequest);
+
         assertAll(
-                () -> assertThatThrownBy(() -> memberService.getMember(createMember.getId()))
-                        .isInstanceOf(BusinessException.class)
+                () -> assertThat(result.getId()).isEqualTo(updateRequest.getId()),
+                () -> assertThat(result.getEmail()).isEqualTo(updateRequest.getEmail()),
+                () -> assertThat(result.getPhoneNumber()).isEqualTo(updateRequest.getPhoneNumber()),
+                () -> assertThat(result.getAddress()).isEqualTo(updateRequest.getAddress())
         );
 
-        verify(deleteMemberPort).softDeleteById(eq(createMember.getId()));
-        verify(getMemberPort).findById(eq(createMember.getId()));
+        ArgumentCaptor<Member> captor = ArgumentCaptor.forClass(Member.class);
+        verify(updateMemberPort).update(captor.capture());
+        Member updated = captor.getValue();
+
+        assertAll(
+                () -> assertThat(updated.getId()).isEqualTo(result.getId()),
+                () -> assertThat(updated.getEmail()).isEqualTo(result.getEmail()),
+                () -> assertThat(updated.getAddress()).isEqualTo(result.getAddress()),
+                () -> assertThat(updated.getPhoneNumber()).isEqualTo(result.getPhoneNumber())
+        );
     }
 }
