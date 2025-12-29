@@ -1,13 +1,7 @@
 package com.example.demo.member.application.service;
 
-import com.example.demo.member.application.port.in.CreateMemberUseCase;
-import com.example.demo.member.application.port.in.DeleteMemberUseCase;
-import com.example.demo.member.application.port.in.GetMemberUseCase;
-import com.example.demo.member.application.port.in.QueryMemberUseCase;
-import com.example.demo.member.application.port.out.CreateMemberPort;
-import com.example.demo.member.application.port.out.DeleteMemberPort;
-import com.example.demo.member.application.port.out.GetMemberPort;
-import com.example.demo.member.application.port.out.QueryMemberPort;
+import com.example.demo.member.application.port.in.*;
+import com.example.demo.member.application.port.out.*;
 import com.example.demo.member.domain.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,11 +11,12 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class MemberService implements CreateMemberUseCase, GetMemberUseCase, DeleteMemberUseCase, QueryMemberUseCase {
+public class MemberService implements CreateMemberUseCase, GetMemberUseCase, DeleteMemberUseCase, UpdateMemberUseCase, QueryMemberUseCase {
 
     private final CreateMemberPort createMemberPort;
     private final GetMemberPort getMemberPort;
     private final DeleteMemberPort deleteMemberPort;
+    private final UpdateMemberPort updateMemberPort;
     private final QueryMemberPort queryMemberPort;
     private final PasswordEncoder passwordEncoder;
 
@@ -50,5 +45,11 @@ public class MemberService implements CreateMemberUseCase, GetMemberUseCase, Del
     @Override
     public void deleteMember(String id) {
         deleteMemberPort.softDeleteById(id);
+    }
+
+    @Override
+    public Member updateMember(Member member) {
+        Member updateMember = updateMemberPort.update(member);
+        return updateMember;
     }
 }

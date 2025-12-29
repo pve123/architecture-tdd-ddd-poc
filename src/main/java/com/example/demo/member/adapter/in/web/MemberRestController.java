@@ -3,12 +3,11 @@ package com.example.demo.member.adapter.in.web;
 
 import com.example.demo.common.response.CommonResponse;
 import com.example.demo.member.adapter.in.web.request.CreateMemberRequest;
+import com.example.demo.member.adapter.in.web.request.UpdateMemberRequest;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.adapter.in.web.response.GetMemberResponse;
-import com.example.demo.member.application.port.in.CreateMemberUseCase;
-import com.example.demo.member.application.port.in.DeleteMemberUseCase;
-import com.example.demo.member.application.port.in.GetMemberUseCase;
-import com.example.demo.member.application.port.in.QueryMemberUseCase;
+import com.example.demo.member.adapter.in.web.response.UpdateMemberResponse;
+import com.example.demo.member.application.port.in.*;
 import com.example.demo.member.domain.Member;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +32,7 @@ public class MemberRestController {
     private final CreateMemberUseCase createMemberUseCase;
     private final GetMemberUseCase getMemberUseCase;
     private final DeleteMemberUseCase deleteMemberUseCase;
+    private final UpdateMemberUseCase updateMemberUseCase;
     private final MemberWebMapper memberWebMapper;
     private final QueryMemberUseCase queryMemberUseCase;
 
@@ -133,4 +133,24 @@ public class MemberRestController {
         deleteMemberUseCase.deleteMember(id);
     }
 
+
+    @Operation(
+            summary = "사용자 정보 수정",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "사용자 정보 수정 완료"
+                    ),
+            }
+    )
+    @PutMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public CommonResponse updateMember(@Parameter(description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
+                             @Valid @RequestBody UpdateMemberRequest updateMemberRequest) {
+        Member member = memberWebMapper.toDomain(id, updateMemberRequest);
+        Member resultMember = updateMemberUseCase.updateMember(member);
+        UpdateMemberResponse updateMemberResponse = memberWebMapper.toUpdateMemberResponse(resultMember);
+        CommonResponse commonResponse = new CommonResponse<>("사용자 수정이 정상적으로 처리됐습니다", updateMemberResponse);
+        return commonResponse;
+    }
 }

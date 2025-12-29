@@ -5,6 +5,7 @@ import com.example.demo.common.exception.MemberErrorCodeEnum;
 import com.example.demo.member.application.port.out.CreateMemberPort;
 import com.example.demo.member.application.port.out.DeleteMemberPort;
 import com.example.demo.member.application.port.out.GetMemberPort;
+import com.example.demo.member.application.port.out.UpdateMemberPort;
 import com.example.demo.member.domain.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -14,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class MemberPersistenceAdapter implements CreateMemberPort, GetMemberPort, DeleteMemberPort {
+public class MemberPersistenceAdapter implements CreateMemberPort, GetMemberPort, DeleteMemberPort, UpdateMemberPort {
 
     private final MemberRepository memberRepository;
     private final MemberPersistenceMapper memberPersistenceMapper;
@@ -42,5 +43,15 @@ public class MemberPersistenceAdapter implements CreateMemberPort, GetMemberPort
         MemberJpaEntity memberJpaEntity = memberRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
         memberJpaEntity.softDeleted();
+    }
+
+    @Override
+    @Transactional
+    public Member update(Member member) {
+        MemberJpaEntity memberJpaEntity = memberRepository.findById(member.getId())
+                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+        memberJpaEntity.update(member);
+        Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
+        return resultMember;
     }
 }
