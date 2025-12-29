@@ -3,6 +3,18 @@ springdoc:
     path: /v1/api-docs
   swagger-ui:
     path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+    display-query-params-without-oauth2: true
+    disable-swagger-default-url: true
+    doc-expansion: list
+    defaultModelsExpandDepth: 1
+    defaultModelExpandDepth: 2
+    defaultModelRendering: model
+    show-extensions: true
+    show-common-extensions: true
+    display-request-duration: true
+    try-it-out-enabled: true
   group-configs:
     - group: 사용자
       paths-to-match:
