@@ -31,7 +31,7 @@ public record CreateMemberRequest(
 
         @NotBlank(message = "전화번호는 필수입니다.")
         @Size(min = 10, max = 20, message = "전화번호는 10자 이상 15자 이하여야 합니다.")
-        @Pattern(message = "한국 형식", regexp = "^010-\\\\d{4}-\\\\d{4}$")
+        @Pattern(message = "한국 형식", regexp = "^010-\\d{4}-\\d{4}$")
         @Schema(description = "전화번호", example = "010-1234-5678")
         String phoneNumber,
 
