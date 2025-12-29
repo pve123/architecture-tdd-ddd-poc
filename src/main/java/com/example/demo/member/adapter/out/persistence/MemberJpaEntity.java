@@ -3,6 +3,7 @@ package com.example.demo.member.adapter.out.persistence;
 import com.example.demo.board.adapter.out.persistence.BoardJpaEntity;
 import com.example.demo.common.jpa.BaseTimeEntity;
 import com.example.demo.member.domain.GenderEnum;
+import com.example.demo.member.domain.Member;
 import com.github.f4b6a3.ulid.UlidCreator;
 import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,7 +31,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
     @Column(nullable = false, updatable = false)
     @Schema(description = "ULID 기반 식별자", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
     private String id;
-    @Column(nullable = false, updatable = false, length = 100)
+    @Column(nullable = false, length = 100)
     @Schema(description = "이메일", example = "user@example.com")
     private String email;
     @Column(nullable = false)
@@ -94,5 +95,11 @@ public class MemberJpaEntity extends BaseTimeEntity {
     public void softDeleted() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+    }
+
+    public void update(Member member) {
+        this.email = member.getEmail();
+        this.address = member.getAddress();
+        this.phoneNumber = member.getPhoneNumber();
     }
 }
