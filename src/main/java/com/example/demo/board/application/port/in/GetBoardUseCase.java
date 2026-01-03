@@ -1,8 +1,8 @@
-package com.example.demo.board.application.port.in;
-
-import com.example.demo.board.domain.Board;
-
-public interface GetBoardUseCase {
-
-    Board getBoard(String id);
-}
+//package com.example.demo.board.application.port.in;
+//
+//import com.example.demo.board.domain.Board;
+//
+//public interface GetBoardUseCase {
+//
+//    Board getBoard(String id);
+//}

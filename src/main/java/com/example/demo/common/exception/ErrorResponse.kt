@@ -1,7 +1,15 @@
-package com.example.demo.common.exception;
+package com.example.demo.common.exception
 
-public record ErrorResponse(
-        String code,
-        String message
+data class ErrorResponse(
+    val code: String,
+    val message: String
 ) {
+    companion object {
+        fun of(errorCode: ErrorCode) = ErrorResponse(
+            code = errorCode.code,
+            message = errorCode.message
+        )
+
+        fun of(code: String, message: String) = ErrorResponse(code, message)
+    }
 }

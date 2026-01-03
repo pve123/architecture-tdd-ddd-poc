@@ -1,30 +1,24 @@
-package com.example.demo.common.exception;
+package com.example.demo.common.exception
 
-import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
-
-@AllArgsConstructor
-public enum MemberErrorCodeEnum implements ErrorCode {
-
-    NOT_FOUND_MEMBER("MEMBER_001", "해당 사용자를 찾을수 없습니다.", HttpStatus.NOT_FOUND);
-
-    private final String code;
-    private final String message;
-    private final HttpStatus httpStatus;
+import org.springframework.http.HttpStatus
 
 
-    @Override
-    public String code() {
-        return code;
-    }
+enum class MemberErrorCodeEnum(
+    override val code: String,
+    override val message: String,
+    override val httpStatus: HttpStatus
+) : ErrorCode {
 
-    @Override
-    public String message() {
-        return message;
-    }
 
-    @Override
-    public HttpStatus httpStatus() {
-        return httpStatus;
-    }
+    NOT_FOUND(
+        "MEMBER_001",
+        "해당 사용자를 찾을 수 없습니다.",
+        HttpStatus.NOT_FOUND
+    ),
+
+    DUPLICATED_EMAIL(
+        "MEMBER_002",
+        "이미 사용 중인 이메일입니다.",
+        HttpStatus.CONFLICT
+    )
 }

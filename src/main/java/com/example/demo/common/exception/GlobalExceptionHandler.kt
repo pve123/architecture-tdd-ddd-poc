@@ -1,76 +1,83 @@
-package com.example.demo.common.exception;
+package com.example.demo.common.exception
 
+import jakarta.persistence.EntityNotFoundException
+import org.hibernate.TransientPropertyValueException
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.RestControllerAdvice
+import java.sql.SQLIntegrityConstraintViolationException
 
-import io.swagger.v3.oas.annotations.Hidden;
-import jakarta.persistence.EntityNotFoundException;
-import org.hibernate.TransientPropertyValueException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.sql.SQLIntegrityConstraintViolationException;
-
-@Hidden
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+class GlobalExceptionHandler {
 
-    @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+    @ExceptionHandler(BusinessException::class)
+    fun handleBusinessException(e: BusinessException): ResponseEntity<ErrorResponse> {
+        val ec = e.errorCode
         return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+            .status(ec.httpStatus)
+            .body(ErrorResponse.of(ec))
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        String field = e.getBindingResult().getFieldError().getField();
-        String message = e.getBindingResult().getFieldError().getDefaultMessage();
-        message = String.format("[%s] %s", field, message);
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), message);
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleMethodArgumentNotValidException(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        val httpStatus = HttpStatus.BAD_REQUEST
+
+        val fieldError = e.bindingResult.fieldError
+        val message = if (fieldError != null) {
+            val field = fieldError.field
+            val msg = fieldError.defaultMessage ?: "유효하지 않은 값입니다."
+            "[$field] $msg"
+        } else {
+            "유효성 검증에 실패했습니다."
+        }
+
+        // ✅ code는 일관되게 관리하는 게 베스트.
+        // 지금은 기존 구현 유지 느낌으로 httpStatus.name() 사용.
         return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+            .status(httpStatus)
+            .body(ErrorResponse.of(httpStatus.name, message))
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+    @ExceptionHandler(
+        HttpMessageNotReadableException::class,
+        SQLIntegrityConstraintViolationException::class,
+        TransientPropertyValueException::class
+    )
+    fun handleBadRequestExceptions(e: Exception): ResponseEntity<ErrorResponse> {
+        val httpStatus = HttpStatus.BAD_REQUEST
+
+        // 운영에서는 e.message 그대로 노출하지 않는 게 보통 더 안전합니다.
+        val message = e.message ?: "잘못된 요청입니다."
+
         return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+            .status(httpStatus)
+            .body(ErrorResponse.of(httpStatus.name, message))
     }
 
-    @ExceptionHandler(TransientPropertyValueException.class)
-    public ResponseEntity<ErrorResponse> handleTransientPropertyValueException(TransientPropertyValueException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+    @ExceptionHandler(EntityNotFoundException::class)
+    fun handleEntityNotFoundException(e: EntityNotFoundException): ResponseEntity<ErrorResponse> {
+        val httpStatus = HttpStatus.NOT_FOUND
+        val message = e.message ?: "리소스를 찾을 수 없습니다."
+
         return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+            .status(httpStatus)
+            .body(ErrorResponse.of(httpStatus.name, message))
     }
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException e) {
-        HttpStatus httpStatus = HttpStatus.NOT_FOUND;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
-        return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
-    }
+    /**
+     * ✅ 마지막 fallback: 예상치 못한 예외
+     * - 운영에서는 반드시 공통 500으로 내려야 함
+     */
+    @ExceptionHandler(Exception::class)
+    fun handleUnexpectedException(e: Exception): ResponseEntity<ErrorResponse> {
+        val httpStatus = HttpStatus.INTERNAL_SERVER_ERROR
+        val message = "서버 오류가 발생했습니다."
 
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        ErrorCode errorCode = e.getErrorCode();
-        ErrorResponse errorResponse = new ErrorResponse(errorCode.code(), errorCode.message());
         return ResponseEntity
-                .status(errorCode.httpStatus())
-                .body(errorResponse);
+            .status(httpStatus)
+            .body(ErrorResponse.of(httpStatus.name, message))
     }
 }

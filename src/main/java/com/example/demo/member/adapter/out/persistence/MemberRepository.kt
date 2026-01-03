@@ -1,9 +1,18 @@
-package com.example.demo.member.adapter.out.persistence;
+package com.example.demo.member.adapter.out.persistence
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
+import com.example.demo.common.exception.BusinessException
+import com.example.demo.common.exception.MemberErrorCodeEnum
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 
 @Repository
-public interface MemberRepository extends JpaRepository<MemberJpaEntity, String> {
+interface MemberRepository : JpaRepository<MemberJpaEntity, String> {
+
+
+    fun findByIdOrThrow(id: String): MemberJpaEntity =
+        findById(id).orElseThrow {
+            BusinessException(MemberErrorCodeEnum.NOT_FOUND)
+        }
+
+
 }

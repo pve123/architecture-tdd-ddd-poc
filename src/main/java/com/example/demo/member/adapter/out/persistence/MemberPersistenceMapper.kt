@@ -1,13 +1,12 @@
-package com.example.demo.member.adapter.out.persistence;
+package com.example.demo.member.adapter.out.persistence
 
-import com.example.demo.member.domain.Member;
-import org.mapstruct.Mapper;
+import com.example.demo.member.domain.Member
+import org.mapstruct.Mapper
 
 @Mapper(componentModel = "spring")
-public interface MemberPersistenceMapper {
+interface MemberPersistenceMapper {
 
-    MemberJpaEntity toJpaEntity(Member member);
-
-    Member toDomain(MemberJpaEntity memberJpaEntity);
+    fun toJpaEntity(member: Member): MemberJpaEntity
+    fun toDomain(memberJpaEntity: MemberJpaEntity): Member
 
 }

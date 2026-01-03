@@ -4,5 +4,5 @@ import com.example.demo.member.domain.Member
 
 interface UpdateMemberUseCase {
 
-    fun updateMember(member: Member): Member
+    fun updateMember(updateMemberCommand: UpdateMemberCommand): Member
 }

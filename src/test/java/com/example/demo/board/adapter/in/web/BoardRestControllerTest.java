@@ -80,7 +80,7 @@ public class BoardRestControllerTest extends TestContainerConfig {
         CreateBoardRequest createBoardRequest = new CreateBoardRequest(
                 "제목 테스트 하려고 작성합니다.",
                 "내용 테스트 하려고 작성합니다.",
-                createMemberResponse.id()
+                createMemberResponse.id
         );
 
         String BoardResponseBody = mockMvc.perform(post("/v1/board")
@@ -101,7 +101,7 @@ public class BoardRestControllerTest extends TestContainerConfig {
         assertAll(
                 () -> assertThat(createBoardResponse.title()).isEqualTo("제목 테스트 하려고 작성합니다."),
                 () -> assertThat(createBoardResponse.content()).isEqualTo("내용 테스트 하려고 작성합니다."),
-                () -> assertThat(createBoardResponse.member().id()).isEqualTo(createBoardResponse.member().id())
+                () -> assertThat(createBoardResponse.member().id).isEqualTo(createBoardResponse.member().id)
         );
     }
 
@@ -116,7 +116,7 @@ public class BoardRestControllerTest extends TestContainerConfig {
                 .andExpect(jsonPath("$.id").value(createBoardResponse.id()))
                 .andExpect(jsonPath("$.title").value("제목 테스트 하려고 작성합니다."))
                 .andExpect(jsonPath("$.content").value("내용 테스트 하려고 작성합니다."))
-                .andExpect(jsonPath("$.member.id").value(createBoardResponse.member().id()));
+                .andExpect(jsonPath("$.member.id").value(createBoardResponse.member().id));
 
     }
 
@@ -131,7 +131,7 @@ public class BoardRestControllerTest extends TestContainerConfig {
                 .andExpect(jsonPath("$.content[0].id").value(createBoardResponse.id()))
                 .andExpect(jsonPath("$.content[0].title").value("제목 테스트 하려고 작성합니다."))
                 .andExpect(jsonPath("$.content[0].content").value("내용 테스트 하려고 작성합니다."))
-                .andExpect(jsonPath("$.content[0].member.id").value(createBoardResponse.member().id()));
+                .andExpect(jsonPath("$.content[0].member.id").value(createBoardResponse.member().id));
 
     }
 
@@ -142,7 +142,7 @@ public class BoardRestControllerTest extends TestContainerConfig {
         UpdateBoardRequest updateBoardRequest = new UpdateBoardRequest(
                 "제목 테스트 하려고 작성합니다.@@@@@",
                 "내용 테스트 하려고 작성합니다.@@@@@",
-                createMemberResponse.id()
+                createMemberResponse.id
         );
 
         //Then
@@ -153,7 +153,7 @@ public class BoardRestControllerTest extends TestContainerConfig {
                 .andExpect(jsonPath("$.id").value(createBoardResponse.id()))
                 .andExpect(jsonPath("$.title").value("제목 테스트 하려고 작성합니다.@@@@@"))
                 .andExpect(jsonPath("$.content").value("내용 테스트 하려고 작성합니다.@@@@@"))
-                .andExpect(jsonPath("$.member.id").value(createBoardResponse.member().id()));
+                .andExpect(jsonPath("$.member.id").value(createBoardResponse.member().id));
 
     }
 }

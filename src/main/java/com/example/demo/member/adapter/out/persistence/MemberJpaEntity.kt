@@ -1,105 +1,67 @@
-package com.example.demo.member.adapter.out.persistence;
+package com.example.demo.member.adapter.out.persistence
 
-import com.example.demo.board.adapter.out.persistence.BoardJpaEntity;
-import com.example.demo.common.jpa.BaseTimeEntity;
-import com.example.demo.member.domain.GenderEnum;
-import com.example.demo.member.domain.Member;
-import com.github.f4b6a3.ulid.UlidCreator;
-import com.google.common.collect.Lists;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
-import org.hibernate.annotations.Where;
-
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.List;
+//import com.example.demo.board.adapter.out.persistence.BoardJpaEntity
+import com.example.demo.common.jpa.BaseTimeEntity
+import com.example.demo.member.domain.GenderEnum
+import com.example.demo.member.domain.Member
+import com.github.f4b6a3.ulid.UlidCreator
+import jakarta.persistence.*
+import org.hibernate.annotations.Where
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity
 @Table(name = "member")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@Where(clause = "is_deleted = false")
-@Schema(description = "회원 정보 Jpa Entity")
-public class MemberJpaEntity extends BaseTimeEntity {
+class MemberJpaEntity(
 
     @Id
     @Column(nullable = false, updatable = false)
-    @Schema(description = "ULID 기반 식별자", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-    private String id;
+    var id: String? = null,
+
     @Column(nullable = false, length = 100)
-    @Schema(description = "이메일", example = "user@example.com")
-    private String email;
+    var email: String,
+
     @Column(nullable = false)
-    @Schema(description = "비밀번호", example = "qwer123456789!")
-    private String password;
+    var password: String,
+
     @Column(nullable = false, length = 25)
-    @Schema(description = "회원 이름", example = "홍길동")
-    private String name;
+    var name: String,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false, length = 25)
-    @Schema(description = "성별", example = "MALE", allowableValues = {"MALE", "FEMALE"})
-    private GenderEnum gender;
-    @Column(nullable = false, length = 20)
-    @Schema(description = "전화번호", example = "010-1234-5678")
-    private String phoneNumber;
-    @Column(nullable = false, length = 200)
-    @Schema(description = "주소", example = "서울특별시 강남구 테헤란로 123")
-    private String address;
-    @Column(nullable = false)
-    @Schema(description = "삭제유무", example = "true", allowableValues = {"true", "false"})
-    private Boolean isDeleted;
-    @Column
-    @Schema(description = "삭제일시", example = "2025-06-11T08:35:53.970Z")
-    private LocalDateTime deletedAt;
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BoardJpaEntity> boardList = Lists.newArrayList();
+    var gender: GenderEnum,
 
-    @Builder(toBuilder = true)
-    public MemberJpaEntity(String id,
-                           String email,
-                           String password,
-                           String name,
-                           GenderEnum gender,
-                           String phoneNumber,
-                           String address,
-                           Boolean isDeleted,
-                           LocalDateTime deletedAt,
-                           List<BoardJpaEntity> boardList,
-                           LocalDateTime createdAt,
-                           LocalDateTime updatedAt) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
-        this.name = name;
-        this.gender = gender;
-        this.phoneNumber = phoneNumber;
-        this.address = address;
-        this.isDeleted = isDeleted;
-        this.deletedAt = deletedAt;
-        this.boardList = boardList;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
+    @Column(nullable = false, length = 20)
+    var phoneNumber: String,
+
+    @Column(nullable = false, length = 200)
+    var address: String,
+
+    @Column(nullable = false)
+    var isDeleted: Boolean = false,
+
+    @Column
+    var deletedAt: LocalDateTime? = null,
+
+//    @OneToMany(mappedBy = "member", cascade = [CascadeType.ALL], orphanRemoval = true)
+//    val boardList: MutableList<BoardJpaEntity> = mutableListOf()
+
+) : BaseTimeEntity() {
 
     @PrePersist
-    public void prePersist() {
-        if (ObjectUtils.isEmpty(id)) this.id = UlidCreator.getUlid().toString();
-        if (ObjectUtils.isEmpty(isDeleted)) this.isDeleted = Boolean.FALSE;
+    fun prePersist() {
+        if (id.isNullOrBlank()) id = UlidCreator.getUlid().toString()
+        isDeleted = false
     }
 
-    public void softDeleted() {
-        this.isDeleted = true;
-        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+    fun softDelete() {
+        isDeleted = true
+        deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"))
     }
 
-    public void update(Member member) {
-        this.email = member.getEmail();
-        this.address = member.getAddress();
-        this.phoneNumber = member.getPhoneNumber();
+    fun applyUpdate(member: Member) {
+        email = member.email
+        address = member.address
+        phoneNumber = member.phoneNumber
     }
 }

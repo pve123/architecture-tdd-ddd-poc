@@ -1,15 +1,8 @@
-package com.example.demo.common.exception;
+package com.example.demo.common.exception
 
-public class BusinessException extends RuntimeException {
+class BusinessException(
+    val errorCode: ErrorCode
+) : RuntimeException(
 
-    private final ErrorCode errorCode;
-
-    public BusinessException(ErrorCode errorCode) {
-        super(errorCode.message());
-        this.errorCode = errorCode;
-    }
-
-    public ErrorCode getErrorCode() {
-        return errorCode;
-    }
-}
+    errorCode.message
+)

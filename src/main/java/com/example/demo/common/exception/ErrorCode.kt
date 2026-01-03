@@ -1,12 +1,9 @@
-package com.example.demo.common.exception;
+package com.example.demo.common.exception
 
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatus
 
-public sealed interface ErrorCode permits MemberErrorCodeEnum, BoardErrorCodeEnum {
-
-    String code();
-
-    String message();
-
-    HttpStatus httpStatus();
+interface ErrorCode {
+    val code: String
+    val message: String
+    val httpStatus: HttpStatus
 }

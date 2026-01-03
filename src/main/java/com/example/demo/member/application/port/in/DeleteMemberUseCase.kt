@@ -1,6 +1,5 @@
-package com.example.demo.member.application.port.in;
+package com.example.demo.member.application.port.`in`
 
-public interface DeleteMemberUseCase {
-
-    void deleteMember(String id);
+interface DeleteMemberUseCase {
+    fun deleteMember(id: String)
 }

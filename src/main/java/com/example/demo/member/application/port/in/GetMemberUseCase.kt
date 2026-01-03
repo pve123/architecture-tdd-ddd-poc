@@ -1,8 +1,7 @@
-package com.example.demo.member.application.port.in;
+package com.example.demo.member.application.port.`in`
 
-import com.example.demo.member.domain.Member;
+import com.example.demo.member.domain.Member
 
-public interface GetMemberUseCase {
-
-    Member getMember(String id);
+interface GetMemberUseCase {
+    fun getMember(id: String): Member
 }
