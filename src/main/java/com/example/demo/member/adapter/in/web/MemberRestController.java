@@ -1,7 +1,6 @@
 package com.example.demo.member.adapter.in.web;
 
 
-import com.example.demo.common.response.CommonResponse;
 import com.example.demo.member.adapter.in.web.request.CreateMemberRequest;
 import com.example.demo.member.adapter.in.web.request.UpdateMemberRequest;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
@@ -29,12 +28,61 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MemberRestController {
 
-    private final CreateMemberUseCase createMemberUseCase;
+    private final GetMembersUseCase getMembersUseCase;
     private final GetMemberUseCase getMemberUseCase;
-    private final DeleteMemberUseCase deleteMemberUseCase;
+    private final CreateMemberUseCase createMemberUseCase;
     private final UpdateMemberUseCase updateMemberUseCase;
+    private final DeleteMemberUseCase deleteMemberUseCase;
     private final MemberWebMapper memberWebMapper;
-    private final QueryMemberUseCase queryMemberUseCase;
+
+    @Operation(
+            summary = "사용자 목록 조회 (페이징)",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "사용자 목록 조회 (페이징) 완료",
+                            content = {
+                                    @Content(
+                                            mediaType = "application/json",
+                                            array = @ArraySchema(schema = @Schema(implementation = GetMemberResponse.class))
+                                    ),
+                            }
+                    ),
+            }
+    )
+    @GetMapping("/page")
+    @ResponseStatus(HttpStatus.OK)
+    public Page<GetMemberResponse> getMembers(Pageable pageable) {
+
+        Page<Member> resultMembers = getMembersUseCase.getMembers(pageable);
+        Page<GetMemberResponse> resultGetMemberResponses = resultMembers.map(memberWebMapper::toGetMemberResponse);
+        return resultGetMemberResponses;
+    }
+
+    @Operation(
+            summary = "사용자 조회",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "사용자 조회 완료",
+                            content = {
+                                    @Content(
+                                            mediaType = "application/json",
+                                            schema = @Schema(implementation = GetMemberResponse.class)
+                                    ),
+                            }
+                    ),
+            }
+    )
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public GetMemberResponse getMember(@Parameter(name = "id", description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
+                                       @RequestParam String id) {
+        Member resultMember = getMemberUseCase.getMember(id);
+        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
+        return getMemberResponse;
+    }
+
 
     @Operation(
             summary = "사용자 생성",
@@ -69,71 +117,6 @@ public class MemberRestController {
 
 
     @Operation(
-            summary = "사용자 목록 조회 (페이징)",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "사용자 목록 조회 (페이징) 완료",
-                            content = {
-                                    @Content(
-                                            mediaType = "application/json",
-                                            array = @ArraySchema(schema = @Schema(implementation = GetMemberResponse.class))
-                                    ),
-                            }
-                    ),
-            }
-    )
-    @GetMapping("/page")
-    @ResponseStatus(HttpStatus.OK)
-    public Page<GetMemberResponse> getAllMember(Pageable pageable) {
-
-        Page<Member> resultMembers = queryMemberUseCase.getMembers(pageable);
-        Page<GetMemberResponse> resultGetMemberResponses = resultMembers.map(memberWebMapper::toGetMemberResponse);
-        return resultGetMemberResponses;
-    }
-
-    @Operation(
-            summary = "사용자 조회",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "사용자 조회 완료",
-                            content = {
-                                    @Content(
-                                            mediaType = "application/json",
-                                            schema = @Schema(implementation = GetMemberResponse.class)
-                                    ),
-                            }
-                    ),
-            }
-    )
-    @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public GetMemberResponse getMember(@Parameter(name = "id", description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-                                       @RequestParam String id) {
-        Member resultMember = getMemberUseCase.getMember(id);
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
-        return getMemberResponse;
-    }
-
-    @Operation(
-            summary = "사용자 삭제",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "204",
-                            description = "사용자 삭제 완료"
-                    ),
-            }
-    )
-    @DeleteMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMember(@Parameter(name = "id", description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-                             @RequestParam String id) {
-        deleteMemberUseCase.deleteMember(id);
-    }
-
-
-    @Operation(
             summary = "사용자 수정",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
@@ -158,10 +141,26 @@ public class MemberRestController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public UpdateMemberResponse updateMember(@Parameter(description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
-                             @Valid @RequestBody UpdateMemberRequest updateMemberRequest) {
+                                             @Valid @RequestBody UpdateMemberRequest updateMemberRequest) {
         Member member = memberWebMapper.toDomain(id, updateMemberRequest);
         Member resultMember = updateMemberUseCase.updateMember(member);
         UpdateMemberResponse updateMemberResponse = memberWebMapper.toUpdateMemberResponse(resultMember);
         return updateMemberResponse;
+    }
+
+    @Operation(
+            summary = "사용자 삭제",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "사용자 삭제 완료"
+                    ),
+            }
+    )
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMember(@Parameter(name = "id", description = "회원 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
+                             @RequestParam String id) {
+        deleteMemberUseCase.deleteMember(id);
     }
 }
