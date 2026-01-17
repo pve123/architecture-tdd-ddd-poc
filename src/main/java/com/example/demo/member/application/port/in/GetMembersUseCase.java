@@ -4,7 +4,7 @@ import com.example.demo.member.domain.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-public interface QueryMemberUseCase {
+public interface GetMembersUseCase {
 
     Page<Member> getMembers(Pageable pageable);
 

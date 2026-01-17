@@ -28,9 +28,9 @@ public interface MemberWebMapper {
     default Member toDomain(String memberId, UpdateMemberRequest updateMemberRequest) {
         return Member.builder()
                 .id(memberId)
-                .email(updateMemberRequest.getEmail())
-                .address(updateMemberRequest.getAddress())
-                .phoneNumber(updateMemberRequest.getPhoneNumber())
+                .email(updateMemberRequest.email())
+                .address(updateMemberRequest.address())
+                .phoneNumber(updateMemberRequest.phoneNumber())
                 .build();
     }
 
