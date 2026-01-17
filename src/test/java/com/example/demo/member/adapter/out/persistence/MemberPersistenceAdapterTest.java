@@ -1,7 +1,6 @@
 package com.example.demo.member.adapter.out.persistence;
 
 
-import com.example.demo.board.domain.Board;
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.config.JpaAuditingConfiguration;
 import com.example.demo.config.QuerydslConfig;
@@ -27,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 @DataJpaTest
 @Import({
         MemberPersistenceAdapter.class,
-        MemberQueryPersistenceAdapter.class,
         MemberPersistenceMapperImpl.class,
         JpaAuditingConfiguration.class,
         QuerydslConfig.class
@@ -38,8 +36,6 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
 
     @Autowired
     private MemberPersistenceAdapter memberPersistenceAdapter;
-    @Autowired
-    private MemberQueryPersistenceAdapter memberQueryPersistenceAdapter;
     @PersistenceContext
     private EntityManager entityManager;
     private Member member;
@@ -62,18 +58,25 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
     }
 
     @Test
-    void 회원_저장() {
+    void 회원_페이징_목록() {
+
+        // when
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Member> resultMemberList = memberPersistenceAdapter.searchMembers(pageable);
+
         // then
         assertAll(
-                () -> assertThat(saveMember.getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(saveMember.getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(saveMember.getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(saveMember.getName()),
-                () -> assertThat(member.getGender()).isEqualTo(saveMember.getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(saveMember.getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(saveMember.getAddress())
+                () -> assertThat(resultMemberList.getContent()).isNotEmpty(),
+                () -> assertThat(resultMemberList.getContent().getFirst().getId()).isNotNull(),
+                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getContent().getFirst().getEmail()),
+                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getContent().getFirst().getPassword()),
+                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getContent().getFirst().getName()),
+                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getContent().getFirst().getGender()),
+                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getContent().getFirst().getPhoneNumber()),
+                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getContent().getFirst().getAddress())
         );
     }
+
 
     @Test
     void 회원_조회() {
@@ -93,39 +96,21 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
         );
     }
 
+
     @Test
-    void 회원_페이징_목록() {
-
-        // when
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<Member> resultMemberList = memberQueryPersistenceAdapter.findAllByPage(pageable);
-
+    void 회원_저장() {
         // then
         assertAll(
-                () -> assertThat(resultMemberList.getContent()).isNotEmpty(),
-                () -> assertThat(resultMemberList.getContent().getFirst().getId()).isNotNull(),
-                () -> assertThat(member.getEmail()).isEqualTo(resultMemberList.getContent().getFirst().getEmail()),
-                () -> assertThat(member.getPassword()).isEqualTo(resultMemberList.getContent().getFirst().getPassword()),
-                () -> assertThat(member.getName()).isEqualTo(resultMemberList.getContent().getFirst().getName()),
-                () -> assertThat(member.getGender()).isEqualTo(resultMemberList.getContent().getFirst().getGender()),
-                () -> assertThat(member.getPhoneNumber()).isEqualTo(resultMemberList.getContent().getFirst().getPhoneNumber()),
-                () -> assertThat(member.getAddress()).isEqualTo(resultMemberList.getContent().getFirst().getAddress())
+                () -> assertThat(saveMember.getId()).isNotNull(),
+                () -> assertThat(member.getEmail()).isEqualTo(saveMember.getEmail()),
+                () -> assertThat(member.getPassword()).isEqualTo(saveMember.getPassword()),
+                () -> assertThat(member.getName()).isEqualTo(saveMember.getName()),
+                () -> assertThat(member.getGender()).isEqualTo(saveMember.getGender()),
+                () -> assertThat(member.getPhoneNumber()).isEqualTo(saveMember.getPhoneNumber()),
+                () -> assertThat(member.getAddress()).isEqualTo(saveMember.getAddress())
         );
     }
 
-    @Test
-    void 회원_삭제() {
-
-        // when
-        memberPersistenceAdapter.softDeleteById(saveMember.getId());
-        entityManager.flush();
-        entityManager.clear();
-        // then
-        assertAll(
-                () -> assertThatThrownBy(() -> memberPersistenceAdapter.findById(saveMember.getId()))
-                        .isInstanceOf(BusinessException.class)
-        );
-    }
 
     @Test
     void 회원_수정() {
@@ -152,6 +137,21 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
                 () -> assertThat(resultMember.getEmail()).isEqualTo(updateMember.getEmail()),
                 () -> assertThat(resultMember.getPhoneNumber()).isEqualTo(updateMember.getPhoneNumber()),
                 () -> assertThat(resultMember.getAddress()).isEqualTo(updateMember.getAddress())
+        );
+    }
+
+
+    @Test
+    void 회원_삭제() {
+
+        // when
+        memberPersistenceAdapter.softDeleteById(saveMember.getId());
+        entityManager.flush();
+        entityManager.clear();
+        // then
+        assertAll(
+                () -> assertThatThrownBy(() -> memberPersistenceAdapter.findById(saveMember.getId()))
+                        .isInstanceOf(BusinessException.class)
         );
     }
 }

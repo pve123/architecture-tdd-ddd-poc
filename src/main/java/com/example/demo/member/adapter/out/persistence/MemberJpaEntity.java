@@ -98,8 +98,8 @@ public class MemberJpaEntity extends BaseTimeEntity {
     }
 
     public void update(Member member) {
-        this.email = member.getEmail();
-        this.address = member.getAddress();
-        this.phoneNumber = member.getPhoneNumber();
+        if (ObjectUtils.isNotEmpty(member.getEmail())) this.email = member.getEmail();
+        if (ObjectUtils.isNotEmpty(member.getPhoneNumber())) this.phoneNumber = member.getPhoneNumber();
+        if (ObjectUtils.isNotEmpty(member.getAddress())) this.address = member.getAddress();
     }
 }
