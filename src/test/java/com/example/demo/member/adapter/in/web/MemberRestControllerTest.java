@@ -1,7 +1,6 @@
 package com.example.demo.member.adapter.in.web;
 
 
-import com.example.demo.common.response.CommonResponse;
 import com.example.demo.config.TestContainerConfig;
 import com.example.demo.member.adapter.in.web.request.CreateMemberRequest;
 import com.example.demo.member.adapter.in.web.request.UpdateMemberRequest;
@@ -63,13 +62,18 @@ public class MemberRestControllerTest extends TestContainerConfig {
     }
 
     @Test
-    void 회원_생성_API_통합_테스트() {
+    void 회원_페이징_목록_API_통합_테스트() throws Exception {
+
         //When & Then
-        assertAll(
-                () -> assertThat(createMemberResponse.name()).isEqualTo("홍길동"),
-                () -> assertThat(createMemberResponse.email()).isEqualTo("user@example.com"),
-                () -> assertThat(createMemberResponse.gender()).isEqualTo(GenderEnum.MALE)
-        );
+        mockMvc.perform(get("/v1/member/page")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(greaterThan(0)))
+                .andExpect(jsonPath("$.content[0].id").value(createMemberResponse.id()))
+                .andExpect(jsonPath("$.content[0].name").value("홍길동"))
+                .andExpect(jsonPath("$.content[0].email").value("user@example.com"))
+                .andExpect(jsonPath("$.content[0].gender").value(GenderEnum.MALE.name()));
+
     }
 
     @Test
@@ -87,30 +91,15 @@ public class MemberRestControllerTest extends TestContainerConfig {
 
     }
 
-    @Test
-    void 회원_페이징_목록_API_통합_테스트() throws Exception {
-
-        //When & Then
-        mockMvc.perform(get("/v1/member/page")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(greaterThan(0)))
-                .andExpect(jsonPath("$.content[0].id").value(createMemberResponse.id()))
-                .andExpect(jsonPath("$.content[0].name").value("홍길동"))
-                .andExpect(jsonPath("$.content[0].email").value("user@example.com"))
-                .andExpect(jsonPath("$.content[0].gender").value(GenderEnum.MALE.name()));
-
-    }
 
     @Test
-    void 회원_삭제_API_통합_테스트() throws Exception {
-
+    void 회원_생성_API_통합_테스트() {
         //When & Then
-        mockMvc.perform(delete("/v1/member")
-                        .param("id", createMemberResponse.id())
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
-
+        assertAll(
+                () -> assertThat(createMemberResponse.name()).isEqualTo("홍길동"),
+                () -> assertThat(createMemberResponse.email()).isEqualTo("user@example.com"),
+                () -> assertThat(createMemberResponse.gender()).isEqualTo(GenderEnum.MALE)
+        );
     }
 
     @Test
@@ -132,6 +121,17 @@ public class MemberRestControllerTest extends TestContainerConfig {
                 .andExpect(jsonPath("$.email").value("user9@example.com"))
                 .andExpect(jsonPath("$.phoneNumber").value("010-1234-9999"))
                 .andExpect(jsonPath("$.address").value("서울특별시 강남구 테헤란로 999"));
+
+    }
+
+    @Test
+    void 회원_삭제_API_통합_테스트() throws Exception {
+
+        //When & Then
+        mockMvc.perform(delete("/v1/member")
+                        .param("id", createMemberResponse.id())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
 
     }
 
