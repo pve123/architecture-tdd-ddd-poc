@@ -62,7 +62,7 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
 
         // when
         Pageable pageable = PageRequest.of(0, 10);
-        Page<Member> resultMemberList = memberPersistenceAdapter.searchMembers(pageable);
+        Page<Member> resultMemberList = memberPersistenceAdapter.searchMembers(pageable, null);
 
         // then
         assertAll(

@@ -2,6 +2,7 @@ package com.example.demo.member.adapter.in.web;
 
 
 import com.example.demo.member.adapter.in.web.request.CreateMemberRequest;
+import com.example.demo.member.adapter.in.web.request.MemberSearchRequest;
 import com.example.demo.member.adapter.in.web.request.UpdateMemberRequest;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.adapter.in.web.response.GetMemberResponse;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -52,9 +54,9 @@ public class MemberRestController {
     )
     @GetMapping("/page")
     @ResponseStatus(HttpStatus.OK)
-    public Page<GetMemberResponse> getMembers(Pageable pageable) {
+    public Page<GetMemberResponse> getMembers(Pageable pageable, @ParameterObject MemberSearchRequest memberSearchRequest) {
 
-        Page<Member> resultMembers = getMembersUseCase.getMembers(pageable);
+        Page<Member> resultMembers = getMembersUseCase.getMembers(pageable, memberSearchRequest);
         Page<GetMemberResponse> resultGetMemberResponses = resultMembers.map(memberWebMapper::toGetMemberResponse);
         return resultGetMemberResponses;
     }
