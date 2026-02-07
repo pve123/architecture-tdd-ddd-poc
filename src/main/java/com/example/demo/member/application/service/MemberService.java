@@ -1,5 +1,6 @@
 package com.example.demo.member.application.service;
 
+import com.example.demo.member.adapter.in.web.request.MemberSearchRequest;
 import com.example.demo.member.application.port.in.*;
 import com.example.demo.member.application.port.out.MemberCommandPort;
 import com.example.demo.member.application.port.out.MemberQueryPort;
@@ -19,8 +20,8 @@ public class MemberService implements GetMembersUseCase, GetMemberUseCase, Creat
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public Page<Member> getMembers(Pageable pageable) {
-        Page<Member> resultMembers = memberQueryPort.searchMembers(pageable);
+    public Page<Member> getMembers(Pageable pageable, MemberSearchRequest memberSearchRequest) {
+        Page<Member> resultMembers = memberQueryPort.searchMembers(pageable, memberSearchRequest);
         return resultMembers;
     }
 

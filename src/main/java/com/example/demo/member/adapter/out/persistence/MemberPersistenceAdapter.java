@@ -2,6 +2,7 @@ package com.example.demo.member.adapter.out.persistence;
 
 import com.example.demo.common.exception.BusinessException;
 import com.example.demo.common.exception.MemberErrorCodeEnum;
+import com.example.demo.member.adapter.in.web.request.MemberSearchRequest;
 import com.example.demo.member.application.port.out.MemberCommandPort;
 import com.example.demo.member.application.port.out.MemberQueryPort;
 import com.example.demo.member.domain.Member;
@@ -23,6 +24,8 @@ import java.util.List;
 public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandPort {
 
 
+    private final MemberOrderSpecifierFactory memberOrderSpecifierFactory;
+    private final MemberSearchPredicateFactory memberSearchPredicateFactory;
     private final MemberRepository memberRepository;
     private final JPAQueryFactory queryFactory;
     private final QMemberJpaEntity qMemberJpaEntity = QMemberJpaEntity.memberJpaEntity;
@@ -30,10 +33,15 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
 
 
     @Override
-    public Page<Member> searchMembers(Pageable pageable) {
+    public Page<Member> searchMembers(Pageable pageable, MemberSearchRequest memberSearchRequest) {
 
         List<Member> content = queryFactory
                 .selectFrom(qMemberJpaEntity)
+                .where(
+                        memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()),
+                        memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
+                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()))
+                .orderBy(memberOrderSpecifierFactory.toOrderSpecifiers(qMemberJpaEntity, pageable.getSort()))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch()
@@ -43,6 +51,9 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
 
         Long total = queryFactory
                 .select(qMemberJpaEntity.count())
+                .where(memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
+                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()),
+                        memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()))
                 .from(qMemberJpaEntity)
                 .fetchOne();
 

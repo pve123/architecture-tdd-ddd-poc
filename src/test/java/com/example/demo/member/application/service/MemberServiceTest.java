@@ -79,7 +79,7 @@ public class MemberServiceTest extends TestDBConfig {
 
 
         //when
-        Page<Member> result = memberService.getMembers(pageable);
+        Page<Member> result = memberService.getMembers(pageable, null);
 
         // then
         assertAll(
