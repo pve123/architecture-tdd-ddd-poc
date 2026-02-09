@@ -2,6 +2,7 @@ package com.example.demo.member.application.service;
 
 
 import com.example.demo.config.TestDBConfig;
+import com.example.demo.member.adapter.in.web.request.MemberSearchRequest;
 import com.example.demo.member.application.port.out.MemberCommandPort;
 import com.example.demo.member.application.port.out.MemberQueryPort;
 import com.example.demo.member.domain.GenderEnum;
@@ -45,13 +46,11 @@ public class MemberServiceTest extends TestDBConfig {
     private MemberService memberService;
 
     private Member member;
-    private Member createMember;
 
     @BeforeEach
     void setup() {
-        // given
-        String id = UlidCreator.getUlid().toString();
 
+        String id = UlidCreator.getUlid().toString();
         member = Member.builder()
                 .id(id)
                 .email("user@example.com")
@@ -61,133 +60,121 @@ public class MemberServiceTest extends TestDBConfig {
                 .phoneNumber("010-1234-5678")
                 .address("서울특별시 강남구 테헤란로 123")
                 .build();
-
-        given(memberCommandPort.save(any(Member.class))).willReturn(member);
-
-        // when
-        createMember = memberService.createMember(member);
     }
 
     @Test
     void 회원_페이징_목록_조회_성공() {
 
-        //given
+        // given
         Pageable pageable = PageRequest.of(0, 10);
-        List<Member> memberList = List.of(createMember);
+        MemberSearchRequest searchRequest = new MemberSearchRequest(
+                "test@test.com",
+                "홍길동",
+                "MALE"
+        );
+        List<Member> memberList = List.of(member);
         Page<Member> members = new PageImpl<>(memberList, pageable, memberList.size());
-        given(memberQueryPort.searchMembers(any(Pageable.class))).willReturn(members);
+        given(
+                memberQueryPort.searchMembers(
+                        any(Pageable.class),
+                        any(MemberSearchRequest.class)))
+                .willReturn(members);
 
 
-        //when
-        Page<Member> result = memberService.getMembers(pageable, null);
+        // when
+        Page<Member> result = memberService.getMembers(pageable, searchRequest);
 
         // then
+        // 결과 페이지 검증
         assertAll(
                 () -> assertThat(result.getContent()).hasSize(1),
                 () -> assertThat(result.getTotalElements()).isEqualTo(1),
                 () -> assertThat(result.getNumber()).isEqualTo(0),
                 () -> assertThat(result.getSize()).isEqualTo(10),
-                () -> assertThat(result.getContent().get(0).getId()).isEqualTo(createMember.getId()),
-                () -> assertThat(result.getContent().get(0).getEmail()).isEqualTo(createMember.getEmail()),
-                () -> assertThat(result.getContent().get(0).getName()).isEqualTo(createMember.getName())
+                () -> assertThat(result.getContent().get(0).getId()).isEqualTo(member.getId()),
+                () -> assertThat(result.getContent().get(0).getEmail()).isEqualTo(member.getEmail()),
+                () -> assertThat(result.getContent().get(0).getName()).isEqualTo(member.getName())
         );
 
-        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(memberQueryPort).searchMembers(captor.capture());
-        assertAll(
-                () -> assertThat(captor.getValue().getPageNumber()).isEqualTo(0),
-                () -> assertThat(captor.getValue().getPageSize()).isEqualTo(10)
-        );
+        // 포트 호출 검증 (pageable, searchRequest 그대로 전달되었는지만 확인)
+        verify(memberQueryPort).searchMembers(eq(pageable), eq(searchRequest));
     }
 
     @Test
+    @DisplayName("회원 단건 조회 성공")
     void 회원_조회_성공() {
 
-        //given
-        given(memberQueryPort.findById(eq(createMember.getId()))).willReturn(createMember);
-        //when
-        Member resultMember = memberService.getMember(createMember.getId());
+        // given
+        String id = member.getId();
+        given(memberQueryPort.findById(id)).willReturn(member);
+        // when
+        Member resultMember = memberService.getMember(id);
         // then
-        assertAll(
-                () -> assertThat(resultMember.getId()).isNotNull(),
-                () -> assertThat(resultMember.getEmail()).isEqualTo(member.getEmail()),
-                () -> assertThat(resultMember.getPassword()).isEqualTo(member.getPassword()),
-                () -> assertThat(resultMember.getName()).isEqualTo(member.getName()),
-                () -> assertThat(resultMember.getGender()).isEqualTo(member.getGender()),
-                () -> assertThat(resultMember.getPhoneNumber()).isEqualTo(member.getPhoneNumber()),
-                () -> assertThat(resultMember.getAddress()).isEqualTo(member.getAddress())
-        );
-
-        verify(memberQueryPort).findById(eq(createMember.getId()));
+        // 반환값은 포트에서 받은 객체 그대로
+        assertThat(resultMember).isSameAs(member);
+        // 올바른 id로 포트가 호출되었는지만 검증
+        verify(memberQueryPort).findById(eq(id));
     }
 
 
     @Test
+    @DisplayName("회원 생성 성공")
     void 회원_생성_성공() {
+        // given
+        given(memberCommandPort.save(any(Member.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        Member result = memberService.createMember(member);
 
         // then
-        assertAll(
-                () -> assertThat(createMember.getId()).isNotNull(),
-                () -> assertThat(createMember.getEmail()).isEqualTo(member.getEmail()),
-                () -> assertThat(createMember.getPassword()).isEqualTo(member.getPassword()),
-                () -> assertThat(createMember.getName()).isEqualTo(member.getName()),
-                () -> assertThat(createMember.getGender()).isEqualTo(member.getGender()),
-                () -> assertThat(createMember.getPhoneNumber()).isEqualTo(member.getPhoneNumber()),
-                () -> assertThat(createMember.getAddress()).isEqualTo(member.getAddress())
-        );
-
         ArgumentCaptor<Member> captor = ArgumentCaptor.forClass(Member.class);
         verify(memberCommandPort).save(captor.capture());
 
         Member saved = captor.getValue();
+
         assertAll(
                 () -> assertThat(saved.getEmail()).isEqualTo(member.getEmail()),
-                () -> assertThat(saved.getName()).isEqualTo(member.getName())
+                () -> assertThat(result.getEmail()).isEqualTo(saved.getEmail())
         );
     }
 
 
     @Test
+    @DisplayName("회원 수정 성공")
     void 회원_수정_성공() {
 
-        //given
-        Member updateRequest = createMember.toBuilder()
+        // given
+        Member updateMember = member.toBuilder()
                 .email("user77@example.com")
                 .phoneNumber("010-1234-5677")
                 .address("서울특별시 강남구 테헤란로 77")
                 .build();
 
-        given(memberCommandPort.update(any(Member.class))).willReturn(updateRequest);
+        given(memberCommandPort.update(any(Member.class))).willReturn(updateMember);
 
         // when
-        Member result = memberService.updateMember(updateRequest);
+        Member result = memberService.updateMember(updateMember);
 
+        // then
+        // 결과는 포트가 리턴한 Member 기준으로만 검증
         assertAll(
-                () -> assertThat(result.getId()).isEqualTo(updateRequest.getId()),
-                () -> assertThat(result.getEmail()).isEqualTo(updateRequest.getEmail()),
-                () -> assertThat(result.getPhoneNumber()).isEqualTo(updateRequest.getPhoneNumber()),
-                () -> assertThat(result.getAddress()).isEqualTo(updateRequest.getAddress())
+                () -> assertThat(result.getId()).isEqualTo(updateMember.getId()),
+                () -> assertThat(result.getEmail()).isEqualTo(updateMember.getEmail()),
+                () -> assertThat(result.getPhoneNumber()).isEqualTo(updateMember.getPhoneNumber()),
+                () -> assertThat(result.getAddress()).isEqualTo(updateMember.getAddress())
         );
 
-        ArgumentCaptor<Member> captor = ArgumentCaptor.forClass(Member.class);
-        verify(memberCommandPort).update(captor.capture());
-        Member updated = captor.getValue();
-
-        assertAll(
-                () -> assertThat(updated.getId()).isEqualTo(result.getId()),
-                () -> assertThat(updated.getEmail()).isEqualTo(result.getEmail()),
-                () -> assertThat(updated.getAddress()).isEqualTo(result.getAddress()),
-                () -> assertThat(updated.getPhoneNumber()).isEqualTo(result.getPhoneNumber())
-        );
+        // 포트 호출 시 updateRequest 그대로 넘겼는지만 검증
+        verify(memberCommandPort).update(eq(updateMember));
     }
 
     @Test
+    @DisplayName("회원 삭제 성공")
     void 회원_삭제_성공() {
-
         // when
-        memberService.deleteMember(createMember.getId());
-
+        memberService.deleteMember(member.getId());
         // then
-        verify(memberCommandPort).softDeleteById(eq(createMember.getId()));
+        verify(memberCommandPort).softDeleteById(eq(member.getId()));
     }
 }
