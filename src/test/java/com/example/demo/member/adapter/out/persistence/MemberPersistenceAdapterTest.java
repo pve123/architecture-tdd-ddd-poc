@@ -93,7 +93,7 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
         Member resultMember = memberPersistenceAdapter.findById(savedMember.getId());
 
         // then
-        assertThat(resultMember.getId()).isNotNull();
+        assertThat(resultMember.getId()).isNotBlank();
         assertMemberEquals(resultMember, savedMember);
     }
 
@@ -102,7 +102,7 @@ public class MemberPersistenceAdapterTest extends TestContainerConfig {
     @DisplayName("회원 저장 성공")
     void 회원_저장() {
         // then
-        assertThat(savedMember.getId()).isNotNull();
+        assertThat(savedMember.getId()).isNotBlank();
         assertMemberEquals(member, savedMember);
     }
 
