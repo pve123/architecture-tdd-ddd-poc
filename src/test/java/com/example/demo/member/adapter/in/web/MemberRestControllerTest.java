@@ -7,7 +7,6 @@ import com.example.demo.member.adapter.in.web.request.UpdateMemberRequest;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.domain.GenderEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,11 +35,13 @@ public class MemberRestControllerTest extends TestContainerConfig {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private CreateMemberResponse createMemberResponse;
 
+    /**
+     * 테스트용 회원 한 명 생성하는 헬퍼.
+     * 각 테스트가 필요할 때마다 호출해서 자신의 픽스처를 만든다.
+     */
+    private CreateMemberResponse createMemberFixture() throws Exception {
 
-    @BeforeEach
-    void setup() throws Exception {
         CreateMemberRequest request = new CreateMemberRequest(
                 "user@example.com",
                 "QWERasdf1234!",
@@ -58,18 +59,22 @@ public class MemberRestControllerTest extends TestContainerConfig {
                 .getResponse()
                 .getContentAsString();
 
-        createMemberResponse = objectMapper.readValue(responseBody, CreateMemberResponse.class);
+        return objectMapper.readValue(responseBody, CreateMemberResponse.class);
     }
 
     @Test
+    @DisplayName("회원 페이징 목록 조회 API 통합 테스트")
     void 회원_페이징_목록_API_통합_테스트() throws Exception {
 
-        //When & Then
-        mockMvc.perform(get("/v1/member/page")
-                        .contentType(MediaType.APPLICATION_JSON))
+
+        // given
+        CreateMemberResponse created = createMemberFixture();
+
+        // when & then
+        mockMvc.perform(get("/v1/member/page"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(greaterThan(0)))
-                .andExpect(jsonPath("$.content[0].id").value(createMemberResponse.id()))
+                .andExpect(jsonPath("$.content.length()").value(greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.content[0].id").value(created.id()))
                 .andExpect(jsonPath("$.content[0].name").value("홍길동"))
                 .andExpect(jsonPath("$.content[0].email").value("user@example.com"))
                 .andExpect(jsonPath("$.content[0].gender").value(GenderEnum.MALE.name()));
@@ -77,14 +82,16 @@ public class MemberRestControllerTest extends TestContainerConfig {
     }
 
     @Test
+    @DisplayName("회원 단건 조회 API 통합 테스트")
     void 회원_조회_API_통합_테스트() throws Exception {
 
-        //When & Then
-        mockMvc.perform(get("/v1/member")
-                        .param("id", createMemberResponse.id())
-                        .contentType(MediaType.APPLICATION_JSON))
+        // given
+        CreateMemberResponse created = createMemberFixture();
+
+        // when & then
+        mockMvc.perform(get("/v1/member").param("id", created.id()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(createMemberResponse.id()))
+                .andExpect(jsonPath("$.id").value(created.id()))
                 .andExpect(jsonPath("$.name").value("홍길동"))
                 .andExpect(jsonPath("$.email").value("user@example.com"))
                 .andExpect(jsonPath("$.gender").value(GenderEnum.MALE.name()));
@@ -93,44 +100,57 @@ public class MemberRestControllerTest extends TestContainerConfig {
 
 
     @Test
-    void 회원_생성_API_통합_테스트() {
-        //When & Then
+    @DisplayName("회원 생성 API 통합 테스트")
+    void 회원_생성_API_통합_테스트() throws Exception {
+
+
+        // when
+        CreateMemberResponse created = createMemberFixture();
+
+        // then
         assertAll(
-                () -> assertThat(createMemberResponse.name()).isEqualTo("홍길동"),
-                () -> assertThat(createMemberResponse.email()).isEqualTo("user@example.com"),
-                () -> assertThat(createMemberResponse.gender()).isEqualTo(GenderEnum.MALE)
+                () -> assertThat(created.id()).isNotBlank(),
+                () -> assertThat(created.name()).isEqualTo("홍길동"),
+                () -> assertThat(created.email()).isEqualTo("user@example.com"),
+                () -> assertThat(created.gender()).isEqualTo(GenderEnum.MALE)
         );
     }
 
     @Test
+    @DisplayName("회원 수정 API 통합 테스트")
     void 회원_수정_API_통합_테스트() throws Exception {
 
-        //When & Then
+        // given
+        CreateMemberResponse created = createMemberFixture();
 
         UpdateMemberRequest request = new UpdateMemberRequest(
-                "user9@example.com",
+                "usertest@example.com",
                 "010-1234-9999",
                 "서울특별시 강남구 테헤란로 999"
         );
 
-        mockMvc.perform(put("/v1/member/{id}", createMemberResponse.id())
+        // when & then
+        mockMvc.perform(put("/v1/member/{id}", created.id())
                         .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(createMemberResponse.id()))
-                .andExpect(jsonPath("$.email").value("user9@example.com"))
+                .andExpect(jsonPath("$.id").value(created.id()))
+                .andExpect(jsonPath("$.email").value("usertest@example.com"))
                 .andExpect(jsonPath("$.phoneNumber").value("010-1234-9999"))
                 .andExpect(jsonPath("$.address").value("서울특별시 강남구 테헤란로 999"));
 
     }
 
     @Test
+    @DisplayName("회원 삭제 API 통합 테스트")
     void 회원_삭제_API_통합_테스트() throws Exception {
 
-        //When & Then
+        // given
+        CreateMemberResponse created = createMemberFixture();
+
+        // when & then
         mockMvc.perform(delete("/v1/member")
-                        .param("id", createMemberResponse.id())
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .param("id", created.id()))
                 .andExpect(status().isNoContent());
 
     }
