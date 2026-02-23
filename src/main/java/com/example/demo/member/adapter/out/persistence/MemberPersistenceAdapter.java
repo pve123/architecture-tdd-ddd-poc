@@ -40,7 +40,9 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
                 .where(
                         memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()),
                         memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
-                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()))
+                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()),
+                        qMemberJpaEntity.isDeleted.eq(false)
+                )
                 .orderBy(memberOrderSpecifierFactory.toOrderSpecifiers(qMemberJpaEntity, pageable.getSort()))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
