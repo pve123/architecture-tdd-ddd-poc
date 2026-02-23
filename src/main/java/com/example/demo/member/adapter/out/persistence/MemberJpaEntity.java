@@ -13,7 +13,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
-import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -23,7 +22,6 @@ import java.util.List;
 @Table(name = "member")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Where(clause = "is_deleted = false")
 @Schema(description = "회원 정보 Jpa Entity")
 public class MemberJpaEntity extends BaseTimeEntity {
 
