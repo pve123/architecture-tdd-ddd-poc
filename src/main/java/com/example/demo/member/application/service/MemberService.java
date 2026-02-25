@@ -31,7 +31,6 @@ public class MemberService implements GetMembersUseCase, GetMemberUseCase, Creat
         return resultMember;
     }
 
-
     @Override
     public Member createMember(Member member) {
         //비밀번호 BCrypt 인코딩

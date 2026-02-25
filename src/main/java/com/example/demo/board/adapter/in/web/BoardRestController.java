@@ -5,15 +5,13 @@ import com.example.demo.board.adapter.in.web.request.CreateBoardRequest;
 import com.example.demo.board.adapter.in.web.request.UpdateBoardRequest;
 import com.example.demo.board.adapter.in.web.response.CreateBoardResponse;
 import com.example.demo.board.adapter.in.web.response.GetBoardResponse;
-import com.example.demo.board.application.port.in.CreateBoardUseCase;
-import com.example.demo.board.application.port.in.GetBoardUseCase;
-import com.example.demo.board.application.port.in.QueryBoardUseCase;
-import com.example.demo.board.application.port.in.UpdateBoardUseCase;
+import com.example.demo.board.application.port.in.*;
 import com.example.demo.board.domain.Board;
 import com.example.demo.common.response.CommonResponse;
 import com.example.demo.member.adapter.in.web.MemberWebMapper;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.adapter.in.web.response.GetMemberResponse;
+import com.example.demo.member.application.port.in.GetMemberUseCase;
 import com.example.demo.member.domain.Member;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,40 +35,12 @@ public class BoardRestController {
 
     private final BoardWebMapper boardWebMapper;
     private final MemberWebMapper memberWebMapper;
+    private final GetMemberUseCase getMemberUseCase;
     private final GetBoardUseCase getBoardUseCase;
     private final CreateBoardUseCase createBoardUseCase;
     private final UpdateBoardUseCase updateBoardUseCase;
+    private final DeleteBoardUseCase deleteBoardUseCase;
     private final QueryBoardUseCase queryBoardUseCase;
-
-    @Operation(
-            summary = "게시글 작성",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = CreateBoardRequest.class))
-            ),
-            responses = {
-                    @ApiResponse(
-                            responseCode = "201",
-                            description = "게시글 작성 완료",
-                            content = {
-                                    @Content(mediaType = "application/json",
-                                            schema = @Schema(implementation = CommonResponse.class)
-                                    ),
-                            }
-                    ),
-            }
-    )
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CommonResponse createBoard(@Valid @RequestBody CreateBoardRequest createBoardRequest) {
-        Member member = memberWebMapper.toDomain(createBoardRequest.memberId());
-        Board board = boardWebMapper.toDomain(createBoardRequest, member);
-        Board resultBoard = createBoardUseCase.createBoard(board);
-        CreateMemberResponse createMemberResponse = memberWebMapper.toCreateMemberResponse(resultBoard.getMember());
-        CreateBoardResponse createBoardResponse = boardWebMapper.toCreateBoardResponse(resultBoard, createMemberResponse);
-        CommonResponse commonResponse = new CommonResponse<>("게시글 작성이 정상적으로 처리됐습니다", createBoardResponse);
-        return commonResponse;
-    }
 
     @Operation(
             summary = "게시글 목록 조회 (페이징)",
@@ -93,7 +63,8 @@ public class BoardRestController {
         Page<Board> resultBoardList = queryBoardUseCase.getBoards(pageable);
         Page<GetBoardResponse> resultBoardResponseList = resultBoardList
                 .map(item -> {
-                    GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(item.getMember());
+                    Member resultMember = getMemberUseCase.getMember(item.getMemberId());
+                    GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
                     return boardWebMapper.toGetBoardResponse(item, getMemberResponse);
                 });
         return resultBoardResponseList;
@@ -121,9 +92,39 @@ public class BoardRestController {
                                      @RequestParam String id) {
 
         Board resultBoard = getBoardUseCase.getBoard(id);
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultBoard.getMember());
+        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
+        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
         GetBoardResponse getBoardResponse = boardWebMapper.toGetBoardResponse(resultBoard, getMemberResponse);
         return getBoardResponse;
+    }
+
+    @Operation(
+            summary = "게시글 작성",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = CreateBoardRequest.class))
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "게시글 작성 완료",
+                            content = {
+                                    @Content(mediaType = "application/json",
+                                            schema = @Schema(implementation = CreateBoardResponse.class)
+                                    ),
+                            }
+                    ),
+            }
+    )
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public CreateBoardResponse createBoard(@Valid @RequestBody CreateBoardRequest createBoardRequest) {
+        Board board = boardWebMapper.toDomain(createBoardRequest);
+        Board resultBoard = createBoardUseCase.createBoard(board);
+        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
+        CreateMemberResponse createMemberResponse = memberWebMapper.toCreateMemberResponse(resultMember);
+        CreateBoardResponse createBoardResponse = boardWebMapper.toCreateBoardResponse(resultBoard, createMemberResponse);
+        return createBoardResponse;
     }
 
 
@@ -153,13 +154,29 @@ public class BoardRestController {
     @ResponseStatus(HttpStatus.OK)
     public GetBoardResponse updateBoard(@Parameter(description = "수정할 게시글 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
                                         @Valid @RequestBody UpdateBoardRequest updateBoardRequest) {
-        Member member = memberWebMapper.toDomain(updateBoardRequest.memberId());
-        Board board = boardWebMapper.toDomain(updateBoardRequest, member, id);
+        Board board = boardWebMapper.toDomain(updateBoardRequest, id);
         Board resultBoard = updateBoardUseCase.updateBoard(board);
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultBoard.getMember());
+        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
+        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
         GetBoardResponse getBoardResponse = boardWebMapper.toGetBoardResponse(resultBoard, getMemberResponse);
         return getBoardResponse;
     }
 
+
+    @Operation(
+            summary = "게시글 삭제",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "게시글 삭제 완료"
+                    ),
+            }
+    )
+    @DeleteMapping()
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteBoard(@Parameter(name = "id", description = "게시판 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
+                            @RequestParam String id) {
+        deleteBoardUseCase.deleteBoard(id);
+    }
 
 }

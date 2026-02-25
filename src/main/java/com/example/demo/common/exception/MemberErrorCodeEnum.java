@@ -6,7 +6,9 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum MemberErrorCodeEnum implements ErrorCode {
 
-    NOT_FOUND_MEMBER("MEMBER_001", "해당 사용자를 찾을수 없습니다.", HttpStatus.NOT_FOUND);
+    MEMBER_NOT_FOUND("MEMBER_001", "해당 사용자를 찾을수 없습니다.", HttpStatus.NOT_FOUND),
+    MEMBER_WITHDRAWN("MEMBER_002", "탈퇴한 사용자입니다.", HttpStatus.BAD_REQUEST);
+
 
     private final String code;
     private final String message;

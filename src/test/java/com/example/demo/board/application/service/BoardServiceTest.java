@@ -1,4 +1,4 @@
-package com.example.demo.board.application.service;
-
-public class BoardServiceTest {
-}
+//package com.example.demo.board.application.service;
+//
+//public class BoardServiceTest {
+//}

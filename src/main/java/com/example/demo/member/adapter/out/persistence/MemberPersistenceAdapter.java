@@ -40,7 +40,9 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
                 .where(
                         memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()),
                         memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
-                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()))
+                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()),
+                        qMemberJpaEntity.isDeleted.eq(false)
+                )
                 .orderBy(memberOrderSpecifierFactory.toOrderSpecifiers(qMemberJpaEntity, pageable.getSort()))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -63,7 +65,7 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
     @Override
     public Member findById(String id) {
         MemberJpaEntity memberJpaEntity = memberRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
         Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
         return resultMember;
     }
@@ -82,7 +84,7 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
     @Transactional
     public Member update(Member member) {
         MemberJpaEntity memberJpaEntity = memberRepository.findById(member.getId())
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
         memberJpaEntity.update(member);
         Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
         return resultMember;
@@ -92,7 +94,7 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
     @Transactional
     public void softDeleteById(String id) {
         MemberJpaEntity memberJpaEntity = memberRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
         memberJpaEntity.softDeleted();
     }
 }
