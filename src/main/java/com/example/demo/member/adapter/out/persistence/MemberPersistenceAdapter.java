@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Component
@@ -64,8 +65,7 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
 
     @Override
     public Member findById(String id) {
-        MemberJpaEntity memberJpaEntity = memberRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+        MemberJpaEntity memberJpaEntity = isActiveMember(id);
         Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
         return resultMember;
     }
@@ -83,8 +83,7 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
     @Override
     @Transactional
     public Member update(Member member) {
-        MemberJpaEntity memberJpaEntity = memberRepository.findById(member.getId())
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+        MemberJpaEntity memberJpaEntity = isActiveMember(member.getId());
         memberJpaEntity.update(member);
         Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
         return resultMember;
@@ -93,8 +92,17 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
     @Override
     @Transactional
     public void softDeleteById(String id) {
-        MemberJpaEntity memberJpaEntity = memberRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.NOT_FOUND_MEMBER));
+        MemberJpaEntity memberJpaEntity = isActiveMember(id);
         memberJpaEntity.softDeleted();
+    }
+
+    private MemberJpaEntity isActiveMember(String id) {
+        Optional<MemberJpaEntity> memberJpaEntityOptional = memberRepository.findById(id);
+        if (memberJpaEntityOptional.isEmpty()) {
+            throw new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND);
+        } else if (memberJpaEntityOptional.get().getIsDeleted().equals(Boolean.TRUE)) {
+            throw new BusinessException(MemberErrorCodeEnum.MEMBER_WITHDRAWN);
+        }
+        return memberJpaEntityOptional.get();
     }
 }

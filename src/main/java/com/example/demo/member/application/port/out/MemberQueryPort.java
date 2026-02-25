@@ -9,7 +9,6 @@ public interface MemberQueryPort {
 
 
     Page<Member> searchMembers(Pageable pageable, MemberSearchRequest memberSearchRequest);
-
     Member findById(String id);
 
 }
