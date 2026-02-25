@@ -8,26 +8,25 @@ import com.example.demo.board.adapter.in.web.response.GetBoardResponse;
 import com.example.demo.board.domain.Board;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.adapter.in.web.response.GetMemberResponse;
-import com.example.demo.member.domain.Member;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface BoardWebMapper {
 
-    default Board toDomain(CreateBoardRequest createBoardRequest, Member member) {
+    default Board toDomain(CreateBoardRequest createBoardRequest) {
         return Board.builder()
                 .title(createBoardRequest.title())
                 .content(createBoardRequest.content())
-                .member(member)
+                .memberId(createBoardRequest.memberId())
                 .build();
     }
 
-    default Board toDomain(UpdateBoardRequest updateBoardRequest, Member member, String boardId) {
+    default Board toDomain(UpdateBoardRequest updateBoardRequest, String boardId) {
         return Board.builder()
                 .id(boardId)
                 .title(updateBoardRequest.title())
                 .content(updateBoardRequest.content())
-                .member(member)
+                .memberId(updateBoardRequest.memberId())
                 .build();
     }
 

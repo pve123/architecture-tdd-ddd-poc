@@ -15,12 +15,12 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "board")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Where(clause = "is_deleted = false")
 @Schema(description = "게시글 정보 Jpa Entity")
 public class BoardJpaEntity extends BaseTimeEntity {
 
@@ -74,5 +74,10 @@ public class BoardJpaEntity extends BaseTimeEntity {
     public void update(Board board) {
         this.title = board.getTitle();
         this.content = board.getContent();
+    }
+
+    public void softDeleted() {
+        this.isDeleted = Boolean.TRUE;
+        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
     }
 }
