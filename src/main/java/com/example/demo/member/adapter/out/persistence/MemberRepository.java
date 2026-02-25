@@ -7,5 +7,4 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface MemberRepository extends JpaRepository<MemberJpaEntity, String> {
 
-    MemberJpaEntity findByIdAndIsDeletedFalse(String id);
 }

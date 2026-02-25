@@ -6,10 +6,9 @@ import com.example.demo.board.application.port.out.BoardQueryPort;
 import com.example.demo.board.domain.Board;
 import com.example.demo.common.exception.BoardErrorCodeEnum;
 import com.example.demo.common.exception.BusinessException;
+import com.example.demo.common.exception.MemberErrorCodeEnum;
 import com.example.demo.member.adapter.out.persistence.MemberJpaEntity;
-import com.example.demo.member.adapter.out.persistence.MemberPersistenceAdapter;
-import com.example.demo.member.adapter.out.persistence.MemberPersistenceMapper;
-import com.example.demo.member.domain.Member;
+import com.example.demo.member.adapter.out.persistence.MemberRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
@@ -27,9 +26,8 @@ import java.util.List;
 public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort {
 
     private final BoardPersistenceMapper boardPersistenceMapper;
-    private final MemberPersistenceMapper memberPersistenceMapper;
-    private final MemberPersistenceAdapter memberPersistenceAdapter;
     private final BoardRepository boardRepository;
+    private final MemberRepository memberRepository;
     private final JPAQueryFactory queryFactory;
     private final QBoardJpaEntity qBoardJpaEntity = QBoardJpaEntity.boardJpaEntity;
 
@@ -43,8 +41,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
                 .fetch()
                 .stream()
                 .map(item -> {
-                    Member member = memberPersistenceMapper.toDomain(item.getMember());
-                    Board board = boardPersistenceMapper.toDomain(item, member);
+                    Board board = boardPersistenceMapper.toDomain(item);
                     return board;
                 })
                 .toList();
@@ -60,21 +57,21 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Override
     public Board findById(String id) {
         BoardJpaEntity boardJpaEntity = boardRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.NOT_FOUND_BOARD));
-        Member resultMember = memberPersistenceMapper.toDomain(boardJpaEntity.getMember());
-        Board resultBoard = boardPersistenceMapper.toDomain(boardJpaEntity, resultMember);
+                .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
+        Board resultBoard = boardPersistenceMapper.toDomain(boardJpaEntity);
         return resultBoard;
     }
 
     @Override
     @Transactional
     public Board save(Board board) {
-        Member member = memberPersistenceAdapter.findById(board.getMember().getId());
-        MemberJpaEntity memberJpaEntity = memberPersistenceMapper.toJpaEntity(member);
+        MemberJpaEntity memberJpaEntity = memberRepository.getReferenceById(board.getMemberId());
+        if (memberJpaEntity.getIsDeleted().equals(Boolean.TRUE)) {
+            throw new BusinessException(MemberErrorCodeEnum.MEMBER_WITHDRAWN);
+        }
         BoardJpaEntity boardJpaEntity = boardPersistenceMapper.toJpaEntity(board, memberJpaEntity);
         BoardJpaEntity resultBoardJpaEntity = boardRepository.save(boardJpaEntity);
-        Member resultMember = memberPersistenceMapper.toDomain(boardJpaEntity.getMember());
-        Board resultBoard = boardPersistenceMapper.toDomain(resultBoardJpaEntity, resultMember);
+        Board resultBoard = boardPersistenceMapper.toDomain(resultBoardJpaEntity);
         return resultBoard;
     }
 
@@ -82,11 +79,15 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Override
     @Transactional
     public Board update(Board board) {
-        BoardJpaEntity boardJpaEntity = boardRepository.findById(board.getId())
-                .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.NOT_FOUND_BOARD));
+        MemberJpaEntity memberJpaEntity = memberRepository.getReferenceById(board.getMemberId());
+        BoardJpaEntity boardJpaEntity = boardRepository.findById(board.getId()).orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
+        if (memberJpaEntity.getIsDeleted().equals(Boolean.TRUE)) {
+            throw new BusinessException(MemberErrorCodeEnum.MEMBER_WITHDRAWN);
+        } else if (!memberJpaEntity.getId().equals(boardJpaEntity.getMember().getId())) {
+            throw new BusinessException(BoardErrorCodeEnum.POST_AUTHOR_MISMATCH);
+        }
         boardJpaEntity.update(board);
-        Member resultMember = memberPersistenceMapper.toDomain(boardJpaEntity.getMember());
-        Board resultBoard = boardPersistenceMapper.toDomain(boardJpaEntity, resultMember);
+        Board resultBoard = boardPersistenceMapper.toDomain(boardJpaEntity);
         return resultBoard;
     }
 
@@ -94,7 +95,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Transactional
     public void softDeleteById(String id) {
         BoardJpaEntity boardJpaEntity = boardRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.NOT_FOUND_BOARD));
+                .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
         boardJpaEntity.softDeleted();
     }
 }
