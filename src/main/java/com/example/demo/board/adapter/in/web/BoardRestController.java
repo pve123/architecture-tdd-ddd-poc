@@ -11,6 +11,7 @@ import com.example.demo.common.response.CommonResponse;
 import com.example.demo.member.adapter.in.web.MemberWebMapper;
 import com.example.demo.member.adapter.in.web.response.CreateMemberResponse;
 import com.example.demo.member.adapter.in.web.response.GetMemberResponse;
+import com.example.demo.member.application.port.in.GetMemberUseCase;
 import com.example.demo.member.domain.Member;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,6 +35,7 @@ public class BoardRestController {
 
     private final BoardWebMapper boardWebMapper;
     private final MemberWebMapper memberWebMapper;
+    private final GetMemberUseCase getMemberUseCase;
     private final GetBoardUseCase getBoardUseCase;
     private final CreateBoardUseCase createBoardUseCase;
     private final UpdateBoardUseCase updateBoardUseCase;
@@ -61,7 +63,8 @@ public class BoardRestController {
         Page<Board> resultBoardList = queryBoardUseCase.getBoards(pageable);
         Page<GetBoardResponse> resultBoardResponseList = resultBoardList
                 .map(item -> {
-                    GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(item.getMember());
+                    Member resultMember = getMemberUseCase.getMember(item.getMemberId());
+                    GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
                     return boardWebMapper.toGetBoardResponse(item, getMemberResponse);
                 });
         return resultBoardResponseList;
@@ -89,7 +92,8 @@ public class BoardRestController {
                                      @RequestParam String id) {
 
         Board resultBoard = getBoardUseCase.getBoard(id);
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultBoard.getMember());
+        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
+        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
         GetBoardResponse getBoardResponse = boardWebMapper.toGetBoardResponse(resultBoard, getMemberResponse);
         return getBoardResponse;
     }
@@ -106,7 +110,7 @@ public class BoardRestController {
                             description = "게시글 작성 완료",
                             content = {
                                     @Content(mediaType = "application/json",
-                                            schema = @Schema(implementation = CommonResponse.class)
+                                            schema = @Schema(implementation = CreateBoardResponse.class)
                                     ),
                             }
                     ),
@@ -115,10 +119,10 @@ public class BoardRestController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CreateBoardResponse createBoard(@Valid @RequestBody CreateBoardRequest createBoardRequest) {
-        Member member = memberWebMapper.toDomain(createBoardRequest.memberId());
-        Board board = boardWebMapper.toDomain(createBoardRequest, member);
+        Board board = boardWebMapper.toDomain(createBoardRequest);
         Board resultBoard = createBoardUseCase.createBoard(board);
-        CreateMemberResponse createMemberResponse = memberWebMapper.toCreateMemberResponse(resultBoard.getMember());
+        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
+        CreateMemberResponse createMemberResponse = memberWebMapper.toCreateMemberResponse(resultMember);
         CreateBoardResponse createBoardResponse = boardWebMapper.toCreateBoardResponse(resultBoard, createMemberResponse);
         return createBoardResponse;
     }
@@ -150,10 +154,10 @@ public class BoardRestController {
     @ResponseStatus(HttpStatus.OK)
     public GetBoardResponse updateBoard(@Parameter(description = "수정할 게시글 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
                                         @Valid @RequestBody UpdateBoardRequest updateBoardRequest) {
-        Member member = memberWebMapper.toDomain(updateBoardRequest.memberId());
-        Board board = boardWebMapper.toDomain(updateBoardRequest, member, id);
+        Board board = boardWebMapper.toDomain(updateBoardRequest, id);
         Board resultBoard = updateBoardUseCase.updateBoard(board);
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultBoard.getMember());
+        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
+        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
         GetBoardResponse getBoardResponse = boardWebMapper.toGetBoardResponse(resultBoard, getMemberResponse);
         return getBoardResponse;
     }
