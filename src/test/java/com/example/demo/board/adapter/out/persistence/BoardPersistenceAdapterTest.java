@@ -4,8 +4,10 @@ import com.example.demo.board.domain.Board;
 import com.example.demo.config.JpaAuditingConfiguration;
 import com.example.demo.config.QuerydslConfig;
 import com.example.demo.config.TestContainerConfig;
+import com.example.demo.member.adapter.out.persistence.MemberOrderSpecifierFactory;
 import com.example.demo.member.adapter.out.persistence.MemberPersistenceAdapter;
 import com.example.demo.member.adapter.out.persistence.MemberPersistenceMapperImpl;
+import com.example.demo.member.adapter.out.persistence.MemberSearchPredicateFactory;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
 import jakarta.persistence.EntityManager;
@@ -29,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
         BoardPersistenceMapperImpl.class,
         MemberPersistenceAdapter.class,
         MemberPersistenceMapperImpl.class,
+        MemberOrderSpecifierFactory.class,
+        MemberSearchPredicateFactory.class,
         JpaAuditingConfiguration.class,
         QuerydslConfig.class
 })
