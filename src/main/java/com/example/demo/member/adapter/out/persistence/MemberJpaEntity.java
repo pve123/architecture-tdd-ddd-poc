@@ -5,7 +5,6 @@ import com.example.demo.common.jpa.BaseTimeEntity;
 import com.example.demo.member.domain.GenderEnum;
 import com.example.demo.member.domain.Member;
 import com.github.f4b6a3.ulid.UlidCreator;
-import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -55,7 +54,7 @@ public class MemberJpaEntity extends BaseTimeEntity {
     @Schema(description = "삭제일시", example = "2025-06-11T08:35:53.970Z")
     private LocalDateTime deletedAt;
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BoardJpaEntity> boardList = Lists.newArrayList();
+    private List<BoardJpaEntity> boardList = new java.util.ArrayList<>();
 
     @Builder(toBuilder = true)
     public MemberJpaEntity(String id,

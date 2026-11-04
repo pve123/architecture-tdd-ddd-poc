@@ -1,6 +1,5 @@
 package com.example.demo.member.adapter.out.persistence;
 
-import com.google.common.collect.Lists;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import org.springframework.data.domain.Sort;
@@ -15,7 +14,7 @@ public class MemberOrderSpecifierFactory {
     public OrderSpecifier<?>[] toOrderSpecifiers(QMemberJpaEntity qMemberJpaEntity, Sort sort) {
 
 
-        List<OrderSpecifier<?>> orders = Lists.newArrayList();
+        List<OrderSpecifier<?>> orders = new java.util.ArrayList<>();
 
 
         //정렬 안하는 경우 생성일 기준으로 내림차순
