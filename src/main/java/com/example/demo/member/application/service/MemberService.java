@@ -4,6 +4,8 @@ import com.example.demo.member.adapter.in.web.request.MemberSearchRequest;
 import com.example.demo.member.application.port.in.*;
 import com.example.demo.member.application.port.out.MemberCommandPort;
 import com.example.demo.member.application.port.out.MemberQueryPort;
+import com.example.demo.common.exception.BusinessException;
+import com.example.demo.common.exception.MemberErrorCodeEnum;
 import com.example.demo.member.domain.Member;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,9 @@ public class MemberService implements GetMembersUseCase, GetMemberUseCase, Creat
 
     @Override
     public Member createMember(Member member) {
+        if (memberQueryPort.existsByEmail(member.getEmail())) {
+            throw new BusinessException(MemberErrorCodeEnum.EMAIL_DUPLICATED);
+        }
         //비밀번호 BCrypt 인코딩
         String encodedPassword = passwordEncoder.encode(member.getPassword());
         member = member.toBuilder().password(encodedPassword).build();
@@ -42,6 +47,9 @@ public class MemberService implements GetMembersUseCase, GetMemberUseCase, Creat
 
     @Override
     public Member updateMember(Member member) {
+        if (member.getEmail() != null && memberQueryPort.existsByEmailOfOtherMember(member.getEmail(), member.getId())) {
+            throw new BusinessException(MemberErrorCodeEnum.EMAIL_DUPLICATED);
+        }
         Member updateMember = memberCommandPort.update(member);
         return updateMember;
     }

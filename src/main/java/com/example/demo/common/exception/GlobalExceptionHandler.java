@@ -1,76 +1,57 @@
 package com.example.demo.common.exception;
 
-
 import io.swagger.v3.oas.annotations.Hidden;
-import jakarta.persistence.EntityNotFoundException;
-import org.hibernate.TransientPropertyValueException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.sql.SQLIntegrityConstraintViolationException;
-
+/**
+ * 예외를 응답으로 바꿉니다.
+ *
+ * <p>예외 메시지에는 SQL 문이나 내부 클래스 이름이 들어 있을 수 있어서 응답에 그대로 담지 않습니다.
+ * 바깥에 보여 줄 문구는 여기서 정합니다.
+ */
 @Hidden
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
+        ErrorCode errorCode = e.getErrorCode();
         return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+                .status(errorCode.httpStatus())
+                .body(new ErrorResponse(errorCode.code(), errorCode.message()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        String field = e.getBindingResult().getFieldError().getField();
-        String message = e.getBindingResult().getFieldError().getDefaultMessage();
-        message = String.format("[%s] %s", field, message);
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), message);
-        return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+        FieldError fieldError = e.getBindingResult().getFieldError();
+        String message = fieldError == null
+                ? "입력값이 올바르지 않습니다."
+                : "[%s] %s".formatted(fieldError.getField(), fieldError.getDefaultMessage());
+        return badRequest(message);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
-        return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+        return badRequest("요청 본문을 읽을 수 없습니다. JSON 형식과 값의 종류를 확인해 주세요.");
     }
 
-    @ExceptionHandler(TransientPropertyValueException.class)
-    public ResponseEntity<ErrorResponse> handleTransientPropertyValueException(TransientPropertyValueException e) {
-        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        HttpStatus status = HttpStatus.CONFLICT;
         return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
+                .status(status)
+                .body(new ErrorResponse(status.name(), "저장할 수 없는 값입니다. 이미 있는 값인지 확인해 주세요."));
     }
 
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException e) {
-        HttpStatus httpStatus = HttpStatus.NOT_FOUND;
-        ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), e.getMessage());
-        return ResponseEntity
-                .status(httpStatus)
-                .body(errorResponse);
-    }
-
-    @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        ErrorCode errorCode = e.getErrorCode();
-        ErrorResponse errorResponse = new ErrorResponse(errorCode.code(), errorCode.message());
-        return ResponseEntity
-                .status(errorCode.httpStatus())
-                .body(errorResponse);
+    private static ResponseEntity<ErrorResponse> badRequest(String message) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(new ErrorResponse(status.name(), message));
     }
 }
