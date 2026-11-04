@@ -1,0 +1,11 @@
+# 로컬 개발용 MariaDB를 띄웁니다. 값은 .env에서 읽습니다.
+services:
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: local
+      MARIADB_USER: ${DB_USERNAME:?DB_USERNAME을 .env에 적어 주세요}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD를 .env에 적어 주세요}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD를 .env에 적어 주세요}
+    ports:
+      - "${DB_PORT:-3306}:3306"

@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 자동 생성 코드 (QueryDSL, MapStruct) ###
+src/main/generated/
+
+### 로컬 환경 ###
+.env

@@ -1,7 +1,6 @@
 package com.example.demo.member.application.service;
 
 
-import com.example.demo.config.TestDBConfig;
 import com.example.demo.member.adapter.in.web.request.MemberSearchRequest;
 import com.example.demo.member.application.port.out.MemberCommandPort;
 import com.example.demo.member.application.port.out.MemberQueryPort;
@@ -34,7 +33,7 @@ import static org.mockito.Mockito.verify;
 
 @DisplayName("Member UseCase Unit Test")
 @ExtendWith(MockitoExtension.class)
-public class MemberServiceTest extends TestDBConfig {
+class MemberServiceTest {
 
     @Mock
     private MemberCommandPort memberCommandPort;
