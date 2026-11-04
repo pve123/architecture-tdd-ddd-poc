@@ -1,156 +1,69 @@
 package io.github.pve123.hexagonal.board.adapter.out.persistence;
 
 import io.github.pve123.hexagonal.board.domain.Board;
-import io.github.pve123.hexagonal.config.JpaAuditingConfiguration;
-import io.github.pve123.hexagonal.config.QuerydslConfig;
+import io.github.pve123.hexagonal.common.config.JpaConfig;
 import io.github.pve123.hexagonal.config.TestContainerConfig;
-import io.github.pve123.hexagonal.member.adapter.out.persistence.MemberOrderSpecifierFactory;
-import io.github.pve123.hexagonal.member.adapter.out.persistence.MemberPersistenceAdapter;
-import io.github.pve123.hexagonal.member.adapter.out.persistence.MemberPersistenceMapperImpl;
-import io.github.pve123.hexagonal.member.adapter.out.persistence.MemberSearchPredicateFactory;
-import io.github.pve123.hexagonal.member.domain.GenderEnum;
-import io.github.pve123.hexagonal.member.domain.Member;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
-@Import({
-        BoardPersistenceAdapter.class,
-        BoardPersistenceMapperImpl.class,
-        MemberPersistenceAdapter.class,
-        MemberPersistenceMapperImpl.class,
-        MemberOrderSpecifierFactory.class,
-        MemberSearchPredicateFactory.class,
-        JpaAuditingConfiguration.class,
-        QuerydslConfig.class
-})
-@DisplayName("Board JPA Persistence Integration Test")
+@Import({BoardPersistenceAdapter.class, JpaConfig.class})
 class BoardPersistenceAdapterTest extends TestContainerConfig {
 
-    @Autowired
-    private MemberPersistenceAdapter memberPersistenceAdapter;
+    private static final String MEMBER_ID = "01WRITER000000000000000000";
 
     @Autowired
-    private BoardPersistenceAdapter boardPersistenceAdapter;
+    private BoardPersistenceAdapter adapter;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    private Member savedMember;
-    private Board savedBoard;
-
+    /** board.member_id에 외래 키가 있어서 글쓴이 행을 먼저 넣어 둡니다. */
     @BeforeEach
-    void setup() {
-        Member member = Member.builder()
-                .email("user@example.com")
-                .password("QWERasdf1234!")
-                .name("홍길동")
-                .gender(GenderEnum.MALE)
-                .phoneNumber("010-1234-5678")
-                .address("서울특별시 강남구 테헤란로 123")
-                .build();
-        savedMember = memberPersistenceAdapter.save(member);
-
-        Board board = Board.builder()
-                .title("제목 테스트 중입니다.")
-                .content("내용 테스트 중입니다.")
-                .memberId(savedMember.getId())
-                .build();
-        savedBoard = boardPersistenceAdapter.save(board);
+    void insertWriter() {
+        jdbcTemplate.update("""
+                INSERT INTO member (id, email, password, name, gender, phone_number, address, is_deleted, created_at, updated_at)
+                VALUES (?, 'writer@example.com', 'pw', '홍길동', 'MALE', '010-1234-5678', '서울특별시 강남구', 0, NOW(), NOW())
+                """, MEMBER_ID);
     }
 
     @Test
-    @DisplayName("게시글 저장 성공")
-    void 게시글_저장() {
-        assertAll(
-                () -> assertThat(savedBoard.getId()).isNotBlank(),
-                () -> assertThat(savedBoard.getTitle()).isEqualTo("제목 테스트 중입니다."),
-                () -> assertThat(savedBoard.getContent()).isEqualTo("내용 테스트 중입니다."),
-                () -> assertThat(savedBoard.getMemberId()).isEqualTo(savedMember.getId())
-        );
+    void 저장한_글을_다시_읽을_수_있다() {
+        Board saved = adapter.save(Board.write(MEMBER_ID, "제목", "내용"));
+
+        assertThat(saved.getCreatedAt()).isNotNull();
+        assertThat(adapter.findActiveById(saved.getId())).get()
+                .extracting(Board::getTitle)
+                .isEqualTo("제목");
     }
 
     @Test
-    @DisplayName("게시글 단건 조회 성공")
-    void 게시글_조회() {
-        Board resultBoard = boardPersistenceAdapter.findById(savedBoard.getId());
+    void 고친_내용을_저장한다() {
+        Board saved = adapter.save(Board.write(MEMBER_ID, "제목", "내용"));
 
-        assertAll(
-                () -> assertThat(resultBoard.getId()).isEqualTo(savedBoard.getId()),
-                () -> assertThat(resultBoard.getTitle()).isEqualTo(savedBoard.getTitle()),
-                () -> assertThat(resultBoard.getContent()).isEqualTo(savedBoard.getContent()),
-                () -> assertThat(resultBoard.getMemberId()).isEqualTo(savedBoard.getMemberId())
-        );
+        saved.edit(MEMBER_ID, "바꾼 제목", "바꾼 내용");
+        adapter.save(saved);
+
+        assertThat(adapter.findActiveById(saved.getId()).orElseThrow().getTitle()).isEqualTo("바꾼 제목");
     }
 
     @Test
-    @DisplayName("게시글 페이징 목록 조회 성공")
-    void 게시글_페이징_목록() {
-        Pageable pageable = PageRequest.of(0, 10);
+    void 지운_글은_조회와_목록과_개수에서_빠진다() {
+        adapter.save(Board.write(MEMBER_ID, "남을 글", "내용"));
+        Board deleted = adapter.save(Board.write(MEMBER_ID, "지울 글", "내용"));
+        deleted.delete(LocalDateTime.of(2026, 1, 1, 12, 0));
+        adapter.save(deleted);
 
-        Page<Board> resultBoardList = boardPersistenceAdapter.searchBoards(pageable);
-
-        assertAll(
-                () -> assertThat(resultBoardList.getContent()).isNotEmpty(),
-                () -> assertThat(resultBoardList.getNumber()).isEqualTo(0),
-                () -> assertThat(resultBoardList.getSize()).isEqualTo(10),
-                () -> assertThat(resultBoardList.getTotalElements()).isGreaterThanOrEqualTo(1)
-        );
-
-        Board firstBoard = resultBoardList.getContent().getFirst();
-        assertAll(
-                () -> assertThat(firstBoard.getTitle()).isEqualTo(savedBoard.getTitle()),
-                () -> assertThat(firstBoard.getContent()).isEqualTo(savedBoard.getContent()),
-                () -> assertThat(firstBoard.getMemberId()).isEqualTo(savedBoard.getMemberId())
-        );
-    }
-
-    @Test
-    @DisplayName("게시글 수정 성공")
-    void 게시글_수정() {
-        Board updateBoard = Board.builder()
-                .id(savedBoard.getId())
-                .title("수정된 제목")
-                .content("수정된 내용")
-                .memberId(savedMember.getId())
-                .build();
-
-        boardPersistenceAdapter.update(updateBoard);
-        entityManager.flush();
-        entityManager.clear();
-
-        Board resultBoard = boardPersistenceAdapter.findById(updateBoard.getId());
-
-        assertAll(
-                () -> assertThat(resultBoard.getId()).isEqualTo(updateBoard.getId()),
-                () -> assertThat(resultBoard.getTitle()).isEqualTo(updateBoard.getTitle()),
-                () -> assertThat(resultBoard.getContent()).isEqualTo(updateBoard.getContent()),
-                () -> assertThat(resultBoard.getMemberId()).isEqualTo(updateBoard.getMemberId())
-        );
-    }
-
-    @Test
-    @DisplayName("게시글 삭제(Soft Delete) 성공")
-    void 게시글_삭제() {
-        boardPersistenceAdapter.softDeleteById(savedBoard.getId());
-        entityManager.flush();
-        entityManager.clear();
-
-        Page<Board> resultBoardList = boardPersistenceAdapter.searchBoards(PageRequest.of(0, 10));
-
-        assertThat(resultBoardList.getContent())
-                .noneMatch(item -> item.getId().equals(savedBoard.getId()));
+        assertThat(adapter.findActiveById(deleted.getId())).isEmpty();
+        assertThat(adapter.search(PageRequest.of(0, 1)).getTotalElements()).isEqualTo(1);
     }
 }

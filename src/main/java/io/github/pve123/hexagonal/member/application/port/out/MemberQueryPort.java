@@ -1,20 +1,25 @@
 package io.github.pve123.hexagonal.member.application.port.out;
 
-import io.github.pve123.hexagonal.member.adapter.in.web.request.MemberSearchRequest;
+import io.github.pve123.hexagonal.member.application.port.in.GetMembersUseCase.SearchCondition;
 import io.github.pve123.hexagonal.member.domain.Member;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Optional;
+
+/** 회원을 읽는 쪽 출구입니다. 바꾸는 쪽(MemberCommandPort)과 나눠서, 읽기 전용 구현을 따로 둘 수 있게 했습니다. */
 public interface MemberQueryPort {
 
+    /** 탈퇴한 회원은 빼고 찾습니다. */
+    Page<Member> search(SearchCondition condition, Pageable pageable);
 
-    Page<Member> searchMembers(Pageable pageable, MemberSearchRequest memberSearchRequest);
+    /** 탈퇴한 회원은 찾지 않습니다. */
+    Optional<Member> findActiveById(String memberId);
 
-    Member findById(String id);
+    /** 탈퇴한 회원도 찾습니다. 탈퇴 여부를 구분해야 할 때 씁니다. */
+    Optional<Member> findById(String memberId);
 
     boolean existsByEmail(String email);
 
-    /** 이메일을 바꿀 때, 같은 이메일을 다른 회원이 쓰고 있는지 확인합니다. */
     boolean existsByEmailOfOtherMember(String email, String memberId);
-
 }

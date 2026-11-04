@@ -4,5 +4,8 @@ import io.github.pve123.hexagonal.board.domain.Board;
 
 public interface CreateBoardUseCase {
 
-    Board createBoard(Board board);
+    Board createBoard(Command command);
+
+    record Command(String memberId, String title, String content) {
+    }
 }

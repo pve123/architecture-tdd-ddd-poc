@@ -1,111 +1,78 @@
 package io.github.pve123.hexagonal.member.adapter.out.persistence;
 
-import io.github.pve123.hexagonal.common.exception.BusinessException;
-import io.github.pve123.hexagonal.common.exception.MemberErrorCodeEnum;
-import io.github.pve123.hexagonal.member.adapter.in.web.request.MemberSearchRequest;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import io.github.pve123.hexagonal.member.application.port.in.GetMembersUseCase.SearchCondition;
 import io.github.pve123.hexagonal.member.application.port.out.MemberCommandPort;
 import io.github.pve123.hexagonal.member.application.port.out.MemberQueryPort;
 import io.github.pve123.hexagonal.member.domain.Member;
-import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
+import static io.github.pve123.hexagonal.member.adapter.out.persistence.QMemberJpaEntity.memberJpaEntity;
 
+/** 회원 출구 포트를 JPA와 QueryDSL로 구현합니다. 트랜잭션은 이 클래스를 부르는 서비스가 엽니다. */
 @Component
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
-public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandPort {
+class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandPort {
 
-
-    private final MemberOrderSpecifierFactory memberOrderSpecifierFactory;
-    private final MemberSearchPredicateFactory memberSearchPredicateFactory;
-    private final MemberRepository memberRepository;
+    private final MemberJpaRepository memberJpaRepository;
     private final JPAQueryFactory queryFactory;
-    private final QMemberJpaEntity qMemberJpaEntity = QMemberJpaEntity.memberJpaEntity;
-    private final MemberPersistenceMapper memberPersistenceMapper;
-
 
     @Override
-    public Page<Member> searchMembers(Pageable pageable, MemberSearchRequest memberSearchRequest) {
-
+    public Page<Member> search(SearchCondition condition, Pageable pageable) {
         List<Member> content = queryFactory
-                .selectFrom(qMemberJpaEntity)
-                .where(
-                        memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()),
-                        memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
-                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()),
-                        qMemberJpaEntity.isDeleted.eq(false)
-                )
-                .orderBy(memberOrderSpecifierFactory.toOrderSpecifiers(qMemberJpaEntity, pageable.getSort()))
+                .selectFrom(memberJpaEntity)
+                .where(MemberSearchConditions.where(condition))
+                .orderBy(MemberSearchConditions.orderBy(pageable.getSort()))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch()
                 .stream()
-                .map(memberPersistenceMapper::toDomain)
+                .map(MemberJpaEntity::toDomain)
                 .toList();
 
-        Long total = queryFactory
-                .select(qMemberJpaEntity.count())
-                .where(memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
-                        memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()),
-                        memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()),
-                        qMemberJpaEntity.isDeleted.eq(false))
-                .from(qMemberJpaEntity)
-                .fetchOne();
-
-        return new PageImpl<>(content, pageable, ObjectUtils.isNotEmpty(total) ? total : 0);
+        return PageableExecutionUtils.getPage(content, pageable, () -> queryFactory
+                .select(memberJpaEntity.count())
+                .from(memberJpaEntity)
+                .where(MemberSearchConditions.where(condition))
+                .fetchOne());
     }
 
     @Override
-    public Member findById(String id) {
-        MemberJpaEntity memberJpaEntity = memberRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
-        Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
-        return resultMember;
+    public Optional<Member> findActiveById(String memberId) {
+        return memberJpaRepository.findByIdAndIsDeletedFalse(memberId).map(MemberJpaEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Member> findById(String memberId) {
+        return memberJpaRepository.findById(memberId).map(MemberJpaEntity::toDomain);
     }
 
     @Override
     public boolean existsByEmail(String email) {
-        return memberRepository.existsByEmail(email);
+        return memberJpaRepository.existsByEmail(email);
     }
 
     @Override
     public boolean existsByEmailOfOtherMember(String email, String memberId) {
-        return memberRepository.existsByEmailAndIdNot(email, memberId);
+        return memberJpaRepository.existsByEmailAndIdNot(email, memberId);
     }
 
     @Override
-    @Transactional
     public Member save(Member member) {
-        MemberJpaEntity memberJpaEntity = memberPersistenceMapper.toJpaEntity(member);
-        MemberJpaEntity resultMemberJpaEntity = memberRepository.save(memberJpaEntity);
-        Member resultMember = memberPersistenceMapper.toDomain(resultMemberJpaEntity);
-        return resultMember;
-    }
-
-
-    @Override
-    @Transactional
-    public Member update(Member member) {
-        MemberJpaEntity memberJpaEntity = memberRepository.findByIdAndIsDeletedFalse(member.getId())
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
-        memberJpaEntity.update(member);
-        Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
-        return resultMember;
-    }
-
-    @Override
-    @Transactional
-    public void softDeleteById(String id) {
-        MemberJpaEntity memberJpaEntity = memberRepository.findByIdAndIsDeletedFalse(id)
-                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
-        memberJpaEntity.softDeleted();
+        MemberJpaEntity entity = memberJpaRepository.findById(member.getId())
+                .map(found -> {
+                    found.apply(member);
+                    return found;
+                })
+                .orElseGet(() -> MemberJpaEntity.from(member));
+        // 생성·수정 시각은 DB에 쓰는 순간 채워지므로 바로 내보내서 응답에 담습니다.
+        return memberJpaRepository.saveAndFlush(entity).toDomain();
     }
 }

@@ -1,82 +1,72 @@
 package io.github.pve123.hexagonal.board.adapter.out.persistence;
 
-
 import io.github.pve123.hexagonal.board.domain.Board;
 import io.github.pve123.hexagonal.common.jpa.BaseTimeEntity;
-import io.github.pve123.hexagonal.member.adapter.out.persistence.MemberJpaEntity;
-import com.github.f4b6a3.ulid.UlidCreator;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
+/**
+ * board 테이블과 1:1로 맞춘 저장용 클래스입니다.
+ * 회원 엔티티를 직접 참조하지 않고 member_id 값만 들고 있습니다.
+ */
 @Entity
 @Table(name = "board")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@Schema(description = "게시글 정보 Jpa Entity")
-public class BoardJpaEntity extends BaseTimeEntity {
+class BoardJpaEntity extends BaseTimeEntity implements Persistable<String> {
 
     @Id
-    @Column(nullable = false, updatable = false)
-    @Schema(description = "ULID 기반 식별자", example = "01JWG8S471E52NTHD6T1G51F6M")
+    @Column(nullable = false, updatable = false, length = 26)
     private String id;
+
     @Column(nullable = false)
-    @Schema(description = "제목", example = "가입인사")
     private String title;
-    @Lob
+
     @Column(nullable = false, columnDefinition = "TEXT")
-    @Schema(description = "내용", example = "가입인사 작성합니다. 만나서 반갑습니다.")
     private String content;
+
+    @Column(nullable = false, updatable = false, length = 26)
+    private String memberId;
+
     @Column(nullable = false)
-    @Schema(description = "삭제유무", example = "true", allowableValues = {"true", "false"})
-    private Boolean isDeleted;
-    @Column
-    @Schema(description = "삭제일시", example = "2025-06-11T08:35:53.970Z")
+    private boolean isDeleted;
+
     private LocalDateTime deletedAt;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false, updatable = false)
-    @Schema(description = "회원 고유번호", example = "01JWG8S476E52NTUD6T1G51F6M")
-    private MemberJpaEntity member;
 
-    @Builder(toBuilder = true)
-    public BoardJpaEntity(String id,
-                          String title,
-                          String content,
-                          Boolean isDeleted,
-                          LocalDateTime deletedAt,
-                          MemberJpaEntity member,
-                          LocalDateTime createdAt,
-                          LocalDateTime updatedAt) {
-        this.id = id;
-        this.title = title;
-        this.content = content;
-        this.isDeleted = isDeleted;
-        this.deletedAt = deletedAt;
-        this.member = member;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+    static BoardJpaEntity from(Board board) {
+        BoardJpaEntity entity = new BoardJpaEntity();
+        entity.id = board.getId();
+        entity.memberId = board.getMemberId();
+        entity.apply(board);
+        return entity;
     }
 
-    @PrePersist
-    public void generateId() {
-        if (ObjectUtils.isEmpty(id)) this.id = UlidCreator.getUlid().toString();
-        if (ObjectUtils.isEmpty(isDeleted)) this.isDeleted = Boolean.FALSE;
-    }
-
-    public void update(Board board) {
+    /** 도메인에서 바뀔 수 있는 값만 옮겨 담습니다. */
+    void apply(Board board) {
         this.title = board.getTitle();
         this.content = board.getContent();
+        this.isDeleted = board.isDeleted();
+        this.deletedAt = board.getDeletedAt();
     }
 
-    public void softDeleted() {
-        this.isDeleted = Boolean.TRUE;
-        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+    Board toDomain() {
+        return Board.restore(id, title, content, memberId, isDeleted, deletedAt, createdAt, updatedAt);
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    /** ID를 도메인이 미리 만들어 오므로, 생성 시각이 없으면 새 글로 봅니다. */
+    @Override
+    public boolean isNew() {
+        return createdAt == null;
     }
 }

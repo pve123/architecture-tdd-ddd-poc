@@ -1,182 +1,80 @@
 package io.github.pve123.hexagonal.board.adapter.in.web;
 
-
-import io.github.pve123.hexagonal.board.adapter.in.web.request.CreateBoardRequest;
-import io.github.pve123.hexagonal.board.adapter.in.web.request.UpdateBoardRequest;
-import io.github.pve123.hexagonal.board.adapter.in.web.response.CreateBoardResponse;
-import io.github.pve123.hexagonal.board.adapter.in.web.response.GetBoardResponse;
-import io.github.pve123.hexagonal.board.application.port.in.*;
+import io.github.pve123.hexagonal.board.application.port.in.CreateBoardUseCase;
+import io.github.pve123.hexagonal.board.application.port.in.DeleteBoardUseCase;
+import io.github.pve123.hexagonal.board.application.port.in.GetBoardUseCase;
+import io.github.pve123.hexagonal.board.application.port.in.GetBoardsUseCase;
+import io.github.pve123.hexagonal.board.application.port.in.UpdateBoardUseCase;
 import io.github.pve123.hexagonal.board.domain.Board;
-import io.github.pve123.hexagonal.common.response.CommonResponse;
-import io.github.pve123.hexagonal.member.adapter.in.web.MemberWebMapper;
-import io.github.pve123.hexagonal.member.adapter.in.web.response.CreateMemberResponse;
-import io.github.pve123.hexagonal.member.adapter.in.web.response.GetMemberResponse;
+import io.github.pve123.hexagonal.member.adapter.in.web.MemberResponse;
 import io.github.pve123.hexagonal.member.application.port.in.GetMemberUseCase;
-import io.github.pve123.hexagonal.member.domain.Member;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "게시글", description = "게시글 작성/조회/수정/삭제")
+/** 게시글 API의 입구(입력 어댑터)입니다. */
+@Tag(name = "게시글")
 @RestController
-@RequestMapping("/v1/board")
 @RequiredArgsConstructor
+@RequestMapping("/v1/board")
 public class BoardRestController {
 
-    private final BoardWebMapper boardWebMapper;
-    private final MemberWebMapper memberWebMapper;
-    private final GetMemberUseCase getMemberUseCase;
-    private final GetBoardUseCase getBoardUseCase;
     private final CreateBoardUseCase createBoardUseCase;
+    private final GetBoardUseCase getBoardUseCase;
+    private final GetBoardsUseCase getBoardsUseCase;
     private final UpdateBoardUseCase updateBoardUseCase;
     private final DeleteBoardUseCase deleteBoardUseCase;
-    private final QueryBoardUseCase queryBoardUseCase;
+    private final GetMemberUseCase getMemberUseCase;
 
-    @Operation(
-            summary = "게시글 목록 조회 (페이징)",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "게시글 목록 조회 (페이징) 완료",
-                            content = {
-                                    @Content(
-                                            mediaType = "application/json",
-                                            array = @ArraySchema(schema = @Schema(implementation = GetBoardResponse.class))
-                                    ),
-                            }
-                    ),
-            }
-    )
+    @Operation(summary = "게시글 목록 (페이징)")
     @GetMapping("/page")
-    @ResponseStatus(HttpStatus.OK)
-    public Page<GetBoardResponse> getBoards(Pageable pageable) {
-        Page<Board> resultBoardList = queryBoardUseCase.getBoards(pageable);
-        Page<GetBoardResponse> resultBoardResponseList = resultBoardList
-                .map(item -> {
-                    Member resultMember = getMemberUseCase.getMember(item.getMemberId());
-                    GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
-                    return boardWebMapper.toGetBoardResponse(item, getMemberResponse);
-                });
-        return resultBoardResponseList;
+    public Page<BoardResponse> getBoards(@ParameterObject Pageable pageable) {
+        return getBoardsUseCase.getBoards(pageable).map(this::toResponse);
     }
 
-
-    @Operation(
-            summary = "게시글 단일 조회",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "게시글 단일 조회 완료",
-                            content = {
-                                    @Content(
-                                            mediaType = "application/json",
-                                            schema = @Schema(implementation = GetBoardResponse.class)
-                                    ),
-                            }
-                    ),
-            }
-    )
+    @Operation(summary = "게시글 한 개 보기")
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public GetBoardResponse getBoard(@Parameter(name = "id", description = "게시판 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-                                     @RequestParam String id) {
-
-        Board resultBoard = getBoardUseCase.getBoard(id);
-        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
-        GetBoardResponse getBoardResponse = boardWebMapper.toGetBoardResponse(resultBoard, getMemberResponse);
-        return getBoardResponse;
+    public BoardResponse getBoard(@RequestParam String id) {
+        return toResponse(getBoardUseCase.getBoard(id));
     }
 
-    @Operation(
-            summary = "게시글 작성",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = CreateBoardRequest.class))
-            ),
-            responses = {
-                    @ApiResponse(
-                            responseCode = "201",
-                            description = "게시글 작성 완료",
-                            content = {
-                                    @Content(mediaType = "application/json",
-                                            schema = @Schema(implementation = CreateBoardResponse.class)
-                                    ),
-                            }
-                    ),
-            }
-    )
+    @Operation(summary = "게시글 쓰기")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CreateBoardResponse createBoard(@Valid @RequestBody CreateBoardRequest createBoardRequest) {
-        Board board = boardWebMapper.toDomain(createBoardRequest);
-        Board resultBoard = createBoardUseCase.createBoard(board);
-        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
-        CreateMemberResponse createMemberResponse = memberWebMapper.toCreateMemberResponse(resultMember);
-        CreateBoardResponse createBoardResponse = boardWebMapper.toCreateBoardResponse(resultBoard, createMemberResponse);
-        return createBoardResponse;
+    public BoardResponse createBoard(@Valid @RequestBody BoardRequest.Create request) {
+        return toResponse(createBoardUseCase.createBoard(request.toCommand()));
     }
 
-
-    @Operation(
-            summary = "게시글 수정",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = UpdateBoardRequest.class)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "게시글 수정 완료",
-                            content = {
-                                    @Content(
-                                            mediaType = "application/json",
-                                            schema = @Schema(implementation = CommonResponse.class)
-                                    ),
-                            }
-                    ),
-            }
-    )
+    @Operation(summary = "게시글 고치기", description = "글쓴이만 고칠 수 있습니다.")
     @PutMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public GetBoardResponse updateBoard(@Parameter(description = "수정할 게시글 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW") @PathVariable String id,
-                                        @Valid @RequestBody UpdateBoardRequest updateBoardRequest) {
-        Board board = boardWebMapper.toDomain(updateBoardRequest, id);
-        Board resultBoard = updateBoardUseCase.updateBoard(board);
-        Member resultMember = getMemberUseCase.getMember(resultBoard.getMemberId());
-        GetMemberResponse getMemberResponse = memberWebMapper.toGetMemberResponse(resultMember);
-        GetBoardResponse getBoardResponse = boardWebMapper.toGetBoardResponse(resultBoard, getMemberResponse);
-        return getBoardResponse;
+    public BoardResponse updateBoard(@PathVariable String id, @Valid @RequestBody BoardRequest.Update request) {
+        return toResponse(updateBoardUseCase.updateBoard(request.toCommand(id)));
     }
 
-
-    @Operation(
-            summary = "게시글 삭제",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "204",
-                            description = "게시글 삭제 완료"
-                    ),
-            }
-    )
-    @DeleteMapping()
+    @Operation(summary = "게시글 지우기")
+    @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteBoard(@Parameter(name = "id", description = "게시판 고유 ID", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-                            @RequestParam String id) {
+    public void deleteBoard(@RequestParam String id) {
         deleteBoardUseCase.deleteBoard(id);
     }
 
+    // TODO(feat/jwt-auth): 목록에서 글마다 회원을 따로 조회한다(N+1). 응답 모양을 바꾸는 PR에서 조회 모델로 바꾼다.
+    private BoardResponse toResponse(Board board) {
+        return BoardResponse.of(board, MemberResponse.from(getMemberUseCase.getMember(board.getMemberId())));
+    }
 }

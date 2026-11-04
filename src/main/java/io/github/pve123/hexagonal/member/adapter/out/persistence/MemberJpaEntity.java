@@ -1,102 +1,89 @@
 package io.github.pve123.hexagonal.member.adapter.out.persistence;
 
-import io.github.pve123.hexagonal.board.adapter.out.persistence.BoardJpaEntity;
 import io.github.pve123.hexagonal.common.jpa.BaseTimeEntity;
-import io.github.pve123.hexagonal.member.domain.GenderEnum;
+import io.github.pve123.hexagonal.member.domain.Gender;
 import io.github.pve123.hexagonal.member.domain.Member;
-import com.github.f4b6a3.ulid.UlidCreator;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.ObjectUtils;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.List;
 
+/**
+ * member 테이블과 1:1로 맞춘 저장용 클래스입니다. 도메인 모델(Member)과 따로 둬서,
+ * 테이블이 바뀌어도 도메인은 영향을 받지 않습니다.
+ */
 @Entity
 @Table(name = "member")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@Schema(description = "회원 정보 Jpa Entity")
-public class MemberJpaEntity extends BaseTimeEntity {
+class MemberJpaEntity extends BaseTimeEntity implements Persistable<String> {
 
     @Id
-    @Column(nullable = false, updatable = false)
-    @Schema(description = "ULID 기반 식별자", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
+    @Column(nullable = false, updatable = false, length = 26)
     private String id;
-    @Column(nullable = false, length = 100)
-    @Schema(description = "이메일", example = "user@example.com")
+
+    @Column(nullable = false, length = 254)
     private String email;
-    @Column(nullable = false)
-    @Schema(description = "비밀번호", example = "qwer123456789!")
+
+    @Column(nullable = false, length = 128)
     private String password;
-    @Column(nullable = false, length = 25)
-    @Schema(description = "회원 이름", example = "홍길동")
+
+    @Column(nullable = false, length = 50)
     private String name;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, updatable = false, length = 25)
-    @Schema(description = "성별", example = "MALE", allowableValues = {"MALE", "FEMALE"})
-    private GenderEnum gender;
+    @Column(nullable = false, updatable = false, length = 10)
+    private Gender gender;
+
     @Column(nullable = false, length = 20)
-    @Schema(description = "전화번호", example = "010-1234-5678")
     private String phoneNumber;
+
     @Column(nullable = false, length = 200)
-    @Schema(description = "주소", example = "서울특별시 강남구 테헤란로 123")
     private String address;
+
     @Column(nullable = false)
-    @Schema(description = "삭제유무", example = "true", allowableValues = {"true", "false"})
-    private Boolean isDeleted;
-    @Column
-    @Schema(description = "삭제일시", example = "2025-06-11T08:35:53.970Z")
+    private boolean isDeleted;
+
     private LocalDateTime deletedAt;
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BoardJpaEntity> boardList = new java.util.ArrayList<>();
 
-    @Builder(toBuilder = true)
-    public MemberJpaEntity(String id,
-                           String email,
-                           String password,
-                           String name,
-                           GenderEnum gender,
-                           String phoneNumber,
-                           String address,
-                           Boolean isDeleted,
-                           LocalDateTime deletedAt,
-                           List<BoardJpaEntity> boardList,
-                           LocalDateTime createdAt,
-                           LocalDateTime updatedAt) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
-        this.name = name;
-        this.gender = gender;
-        this.phoneNumber = phoneNumber;
-        this.address = address;
-        this.isDeleted = isDeleted;
-        this.deletedAt = deletedAt;
-        this.boardList = boardList;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+    static MemberJpaEntity from(Member member) {
+        MemberJpaEntity entity = new MemberJpaEntity();
+        entity.id = member.getId();
+        entity.password = member.getPassword();
+        entity.name = member.getName();
+        entity.gender = member.getGender();
+        entity.apply(member);
+        return entity;
     }
 
-    @PrePersist
-    public void prePersist() {
-        if (ObjectUtils.isEmpty(id)) this.id = UlidCreator.getUlid().toString();
-        if (ObjectUtils.isEmpty(isDeleted)) this.isDeleted = Boolean.FALSE;
+    /** 도메인에서 바뀔 수 있는 값만 옮겨 담습니다. */
+    void apply(Member member) {
+        this.email = member.getEmail();
+        this.phoneNumber = member.getPhoneNumber();
+        this.address = member.getAddress();
+        this.isDeleted = member.isDeleted();
+        this.deletedAt = member.getDeletedAt();
     }
 
-    public void softDeleted() {
-        this.isDeleted = true;
-        this.deletedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+    Member toDomain() {
+        return Member.restore(id, email, password, name, gender, phoneNumber, address,
+                isDeleted, deletedAt, createdAt, updatedAt);
     }
 
-    public void update(Member member) {
-        if (ObjectUtils.isNotEmpty(member.getEmail())) this.email = member.getEmail();
-        if (ObjectUtils.isNotEmpty(member.getPhoneNumber())) this.phoneNumber = member.getPhoneNumber();
-        if (ObjectUtils.isNotEmpty(member.getAddress())) this.address = member.getAddress();
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    /** ID를 도메인이 미리 만들어 오므로, 생성 시각이 없으면 새 회원으로 봅니다. 그래야 save가 SELECT 없이 INSERT합니다. */
+    @Override
+    public boolean isNew() {
+        return createdAt == null;
     }
 }

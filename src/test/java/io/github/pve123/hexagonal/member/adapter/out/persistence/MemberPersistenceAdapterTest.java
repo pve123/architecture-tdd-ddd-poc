@@ -1,171 +1,84 @@
 package io.github.pve123.hexagonal.member.adapter.out.persistence;
 
-
-import io.github.pve123.hexagonal.common.exception.BusinessException;
-import io.github.pve123.hexagonal.config.JpaAuditingConfiguration;
-import io.github.pve123.hexagonal.config.QuerydslConfig;
+import io.github.pve123.hexagonal.common.config.JpaConfig;
 import io.github.pve123.hexagonal.config.TestContainerConfig;
-import io.github.pve123.hexagonal.member.adapter.in.web.request.MemberSearchRequest;
-import io.github.pve123.hexagonal.member.domain.GenderEnum;
+import io.github.pve123.hexagonal.member.application.port.in.GetMembersUseCase.SearchCondition;
+import io.github.pve123.hexagonal.member.domain.Gender;
 import io.github.pve123.hexagonal.member.domain.Member;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
 
 @DataJpaTest
-@Import({
-        MemberPersistenceAdapter.class,
-        MemberPersistenceMapperImpl.class,
-        JpaAuditingConfiguration.class,
-        QuerydslConfig.class,
-        MemberOrderSpecifierFactory.class,
-        MemberSearchPredicateFactory.class
-})
-@DisplayName("Member JPA Persistence Integration Test")
-public class MemberPersistenceAdapterTest extends TestContainerConfig {
+@Import({MemberPersistenceAdapter.class, JpaConfig.class})
+class MemberPersistenceAdapterTest extends TestContainerConfig {
+
+    private static final SearchCondition NO_CONDITION = new SearchCondition(null, null, null);
 
     @Autowired
-    private MemberPersistenceAdapter memberPersistenceAdapter;
-    @PersistenceContext
-    private EntityManager entityManager;
-    private Member member;
-    private Member savedMember;
+    private MemberPersistenceAdapter adapter;
 
+    @Test
+    void 저장하면_생성_시각이_채워지고_다시_읽을_수_있다() {
+        Member saved = adapter.save(member("user@example.com", "홍길동", Gender.MALE));
 
-    @BeforeEach
-    void setup() {
-        // given
-        member = Member.builder()
-                .email("user@example.com")
-                .password("QWERasdf1234!")
-                .name("홍길동")
-                .gender(GenderEnum.MALE)
-                .phoneNumber("010-1234-5678")
-                .address("서울특별시 강남구 테헤란로 123")
-                .build();
-        // when
-        savedMember = memberPersistenceAdapter.save(member);
-        // flush/clear는 각 테스트에서 필요할 때만 호출
+        assertThat(saved.getCreatedAt()).isNotNull();
+        assertThat(adapter.findActiveById(saved.getId())).get()
+                .extracting(Member::getEmail)
+                .isEqualTo("user@example.com");
     }
 
     @Test
-    @DisplayName("회원 페이징 목록 조회 성공")
-    void 회원_페이징_목록() {
+    void 바뀐_연락처를_저장한다() {
+        Member saved = adapter.save(member("user@example.com", "홍길동", Gender.MALE));
 
-        // when
-        Pageable pageable = PageRequest.of(0, 10);
-        MemberSearchRequest searchRequest = new MemberSearchRequest(
-                "user@example.com",
-                "홍길동",
-                "MALE"
-        );
-        Page<Member> resultMemberList = memberPersistenceAdapter.searchMembers(pageable, searchRequest);
+        saved.changeContact(null, "010-9999-9999", null);
+        adapter.save(saved);
 
-        // then
-        assertAll(
-                () -> assertThat(resultMemberList.getContent()).isNotEmpty(),
-                () -> assertThat(resultMemberList.getNumber()).isEqualTo(0),
-                () -> assertThat(resultMemberList.getSize()).isEqualTo(10),
-                () -> assertThat(resultMemberList.getTotalElements()).isGreaterThanOrEqualTo(1)
-        );
-        Member firstMember = resultMemberList.getContent().getFirst();
-        assertMemberEquals(firstMember, savedMember);
+        assertThat(adapter.findActiveById(saved.getId()).orElseThrow().getPhoneNumber()).isEqualTo("010-9999-9999");
     }
-
 
     @Test
-    @DisplayName("회원 단건 조회 성공")
-    void 회원_조회() {
+    void 탈퇴한_회원은_조회와_검색에서_빠지지만_탈퇴_여부는_확인할_수_있다() {
+        Member member = adapter.save(member("leave@example.com", "홍길동", Gender.MALE));
+        member.withdraw(LocalDateTime.of(2026, 1, 1, 12, 0));
+        adapter.save(member);
 
-        // when
-        Member resultMember = memberPersistenceAdapter.findById(savedMember.getId());
-
-        // then
-        assertThat(resultMember.getId()).isNotBlank();
-        assertMemberEquals(resultMember, savedMember);
+        assertThat(adapter.findActiveById(member.getId())).isEmpty();
+        assertThat(adapter.findById(member.getId())).get().extracting(Member::isDeleted).isEqualTo(true);
+        assertThat(adapter.search(NO_CONDITION, PageRequest.of(0, 10)).getTotalElements()).isZero();
     }
-
 
     @Test
-    @DisplayName("회원 저장 성공")
-    void 회원_저장() {
-        // then
-        assertThat(savedMember.getId()).isNotBlank();
-        assertMemberEquals(member, savedMember);
-    }
+    void 이메일_이름_성별로_검색한다() {
+        adapter.save(member("kim@example.com", "김철수", Gender.MALE));
+        adapter.save(member("lee@example.com", "이영희", Gender.FEMALE));
 
+        assertThat(adapter.search(new SearchCondition("kim", null, null), PageRequest.of(0, 10)).getContent())
+                .extracting(Member::getName).containsExactly("김철수");
+        assertThat(adapter.search(new SearchCondition(null, "영희", null), PageRequest.of(0, 10)).getContent())
+                .extracting(Member::getName).containsExactly("이영희");
+        assertThat(adapter.search(new SearchCondition(null, null, "female"), PageRequest.of(0, 10)).getContent())
+                .extracting(Member::getName).containsExactly("이영희");
+    }
 
     @Test
-    @DisplayName("회원 수정 성공")
-    void 회원_수정() {
+    void 이름순으로_정렬한다() {
+        adapter.save(member("b@example.com", "나영", Gender.FEMALE));
+        adapter.save(member("a@example.com", "가영", Gender.FEMALE));
 
-        // when
-
-        Member updateMember = Member.builder()
-                .id(savedMember.getId())
-                .email("usertest@example.com")
-                .phoneNumber("010-1234-3333")
-                .address("서울특별시 강남구 테헤란로 3333")
-                .build();
-
-        memberPersistenceAdapter.update(updateMember);
-        entityManager.flush();
-        entityManager.clear();
-
-        Member resultMember = memberPersistenceAdapter.findById(updateMember.getId());
-
-        // then
-        // 변경된 필드 검증
-        assertAll(
-                () -> assertThat(resultMember.getId()).isEqualTo(updateMember.getId()),
-                () -> assertThat(resultMember.getEmail()).isEqualTo(updateMember.getEmail()),
-                () -> assertThat(resultMember.getPhoneNumber()).isEqualTo(updateMember.getPhoneNumber()),
-                () -> assertThat(resultMember.getAddress()).isEqualTo(updateMember.getAddress())
-        );
+        assertThat(adapter.search(NO_CONDITION, PageRequest.of(0, 10, Sort.by("name"))).getContent())
+                .extracting(Member::getName).containsExactly("가영", "나영");
     }
 
-
-    @Test
-    @DisplayName("회원 삭제(Soft Delete) 성공")
-    void 회원_삭제() {
-
-        // when
-        memberPersistenceAdapter.softDeleteById(savedMember.getId());
-        entityManager.flush();
-        entityManager.clear();
-        // then
-        // 삭제된 회원 조회 시 예외 발생
-        assertAll(
-                () -> assertThatThrownBy(() -> memberPersistenceAdapter.findById(savedMember.getId()))
-                        .isInstanceOf(BusinessException.class)
-        );
-    }
-
-
-    /**
-     * 도메인 Member 필드 비교 헬퍼
-     * 통합 테스트에서 중복되는 필드 비교를 한 곳에 모아서 관리
-     */
-    private void assertMemberEquals(Member actual, Member expected) {
-        assertAll(
-                () -> assertThat(actual.getEmail()).isEqualTo(expected.getEmail()),
-                () -> assertThat(actual.getPassword()).isEqualTo(expected.getPassword()),
-                () -> assertThat(actual.getName()).isEqualTo(expected.getName()),
-                () -> assertThat(actual.getGender()).isEqualTo(expected.getGender()),
-                () -> assertThat(actual.getPhoneNumber()).isEqualTo(expected.getPhoneNumber()),
-                () -> assertThat(actual.getAddress()).isEqualTo(expected.getAddress())
-        );
+    private static Member member(String email, String name, Gender gender) {
+        return Member.register(email, "encoded-password", name, gender, "010-1234-5678", "서울특별시 강남구 테헤란로 123");
     }
 }

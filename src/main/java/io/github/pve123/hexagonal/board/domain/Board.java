@@ -1,31 +1,97 @@
 package io.github.pve123.hexagonal.board.domain;
 
-
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Getter;
+import com.github.f4b6a3.ulid.UlidCreator;
+import io.github.pve123.hexagonal.common.error.BusinessException;
 
 import java.time.LocalDateTime;
 
-@Builder(toBuilder = true)
-@Getter
-@Schema(description = "게시글 도메인")
+/**
+ * 게시글 도메인 모델입니다. 스프링과 JPA를 모르는 순수 자바 클래스입니다.
+ *
+ * <p>글쓴이는 회원 객체가 아니라 회원 ID(memberId)로만 가리킵니다.
+ * 게시판이 회원의 내부 구조를 알 필요가 없기 때문입니다.
+ */
 public class Board {
 
-    @Schema(description = "ULID 기반 식별자", example = "01HZY74JZP5VDFKHX6D5YFRAZW")
-    private String id;
-    @Schema(description = "제목", example = "가입인사")
+    private final String id;
     private String title;
-    @Schema(description = "내용", example = "가입인사 작성합니다. 만나서 반갑습니다.")
     private String content;
-    @Schema(description = "작성자 고유 번호", example = "01JWG8S471E52NTHD6T1G51F6M")
-    private String memberId;
-    @Schema(description = "삭제유무", example = "false", allowableValues = {"true", "false"})
-    private Boolean isDeleted;
-    @Schema(description = "삭제일", example = "2025-01-01T15:55:55")
+    private final String memberId;
+    private boolean deleted;
     private LocalDateTime deletedAt;
-    @Schema(description = "생성일", example = "2025-01-01T15:55:55")
-    private LocalDateTime createdAt;
-    @Schema(description = "수정일", example = "2023-12-10T55:55:55")
-    private LocalDateTime updatedAt;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
+
+    private Board(String id, String title, String content, String memberId, boolean deleted,
+                  LocalDateTime deletedAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.memberId = memberId;
+        this.deleted = deleted;
+        this.deletedAt = deletedAt;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public static Board write(String memberId, String title, String content) {
+        return new Board(UlidCreator.getUlid().toString(), title, content, memberId, false, null, null, null);
+    }
+
+    /** 저장소에서 읽은 값으로 게시글을 되살립니다. 어댑터만 씁니다. */
+    public static Board restore(String id, String title, String content, String memberId, boolean deleted,
+                                LocalDateTime deletedAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new Board(id, title, content, memberId, deleted, deletedAt, createdAt, updatedAt);
+    }
+
+    /** 글쓴이만 고칠 수 있습니다. */
+    public void edit(String editorId, String title, String content) {
+        if (!isWrittenBy(editorId)) {
+            throw new BusinessException(BoardErrorCode.POST_AUTHOR_MISMATCH);
+        }
+        this.title = title;
+        this.content = content;
+    }
+
+    /** 기록은 지우지 않고 삭제 표시만 남깁니다. */
+    public void delete(LocalDateTime now) {
+        this.deleted = true;
+        this.deletedAt = now;
+    }
+
+    public boolean isWrittenBy(String memberId) {
+        return this.memberId.equals(memberId);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getMemberId() {
+        return memberId;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 }
