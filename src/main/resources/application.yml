@@ -1,17 +1,17 @@
+# 비밀값(DB 비밀번호 등)은 여기에 적지 않습니다.
+# 환경변수로 넣거나 프로젝트 폴더의 .env 파일에 적습니다. (.env.example 참고, .env는 Git에 올리지 않습니다)
 spring:
   config:
     import:
+      - "optional:file:.env[.properties]"
       - "application-swagger.yml"
   profiles:
-    active: ${spring.profiles.active}
+    default: local
     group:
       local:
         - db
       test:
         - db
 
-
-
 server:
-  port: 8099
-
+  port: ${SERVER_PORT:8099}
