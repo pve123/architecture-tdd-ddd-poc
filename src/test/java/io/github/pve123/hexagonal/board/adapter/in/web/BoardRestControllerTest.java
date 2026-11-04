@@ -69,6 +69,18 @@ class BoardRestControllerTest extends ApiTestSupport {
     }
 
     @Test
+    void 다른_회원은_글을_지울_수_없다() throws Exception {
+        String boardId = createBoard("가입인사");
+        String otherToken = signUpAndLogin("other@example.com");
+
+        mockMvc.perform(as(otherToken, delete("/v1/boards/{boardId}", boardId)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BOARD_003"));
+        mockMvc.perform(get("/v1/boards/{boardId}", boardId))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void 글쓴이가_지운_글은_다시_조회되지_않는다() throws Exception {
         String boardId = createBoard("가입인사");
 
