@@ -1,0 +1,18 @@
+package io.github.pve123.hexagonal.member.adapter.out.persistence;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+
+@Repository
+public interface MemberRepository extends JpaRepository<MemberJpaEntity, String> {
+
+    Optional<MemberJpaEntity> findByIdAndIsDeletedFalse(String id);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, String id);
+
+}
