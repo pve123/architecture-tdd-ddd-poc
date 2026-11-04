@@ -1,278 +1,148 @@
 # architecture-tdd-ddd-poc
 
-회원(Member)과 게시글(Board) 도메인을 대상으로 **TDD, DDD, CQRS, Hexagonal Architecture**를 함께 연습하기 위한 Spring Boot 기반 PoC 프로젝트입니다.
+회원과 게시글 API를 헥사고날 아키텍처로 만든 Spring Boot 프로젝트다.
 
-기본적인 CRUD를 넘어서 다음과 같은 관심사를 한 저장소에서 같이 다룹니다.
+이 저장소는 두 가지를 보여 주려고 만들었다.
 
-- 도메인 중심 계층 분리
-- 입력/출력 포트 기반 애플리케이션 서비스 구성
-- JPA + QueryDSL 기반 조회/영속화 분리
-- Flyway 기반 스키마 및 더미 데이터 관리
-- Swagger(OpenAPI) 기반 API 문서화
-- Testcontainers 기반 통합 테스트
+1. 의존 방향을 지키는 설계. 도메인은 스프링과 JPA를 모르고, 그 규칙을 ArchUnit 테스트가 지킨다.
+2. 브랜치와 PR 단위로 일하는 흐름. 버그는 실패하는 테스트를 먼저 커밋하고 그다음에 고쳤다.
 
----
+설계 결정과 흐름도는 [설계 문서](docs/architecture.md)에 자세히 적었다.
 
-## 1. Tech Stack
+## 기술 스택
 
-- **Language / Runtime**: Java 21, Kotlin stdlib 일부 사용
-- **Framework**: Spring Boot 3.5.8
-- **Build**: Gradle
-- **Persistence**: Spring Data JPA, QueryDSL, MariaDB
-- **Migration**: Flyway
-- **API Docs**: springdoc-openapi (Swagger UI)
-- **Mapping**: MapStruct
-- **Security**: Spring Security
-- **Test**: JUnit 5, Spring Boot Test, MockMvc, Testcontainers
-- **ID Strategy**: ULID
+| 구분 | 사용한 것 |
+|---|---|
+| 언어와 프레임워크 | Java 25, Spring Boot 4.1, Spring Security 7 |
+| 데이터 | MariaDB 11.4, Spring Data JPA, OpenFeign QueryDSL 7, Flyway |
+| 인증 | JWT (jjwt 0.13) |
+| ID | ULID |
+| 문서 | springdoc-openapi와 Swagger UI |
+| 테스트 | JUnit 5, MockMvc, Testcontainers, ArchUnit |
 
----
+## 한눈에 보는 구조
 
-## 2. Architecture Overview
+```mermaid
+flowchart LR
+    client([클라이언트])
 
-이 프로젝트는 전형적인 레이어드 구조보다, 다음과 같은 **포트/어댑터 중심 구조**를 지향합니다.
+    subgraph member[member 컨텍스트]
+        direction LR
+        mweb[웹 어댑터] --> min[입구 포트] --> msvc[MemberService] --> mdomain[Member]
+        msvc --> mout[출구 포트] --> mdb[JPA 어댑터]
+    end
 
-```text
-adapter/in/web        -> HTTP 요청/응답, Controller, Request/Response DTO
-application/port/in   -> 유스케이스 인터페이스
-application/service   -> 유스케이스 구현
-application/port/out  -> 외부 의존성 인터페이스
-adapter/out/persistence -> JPA/QueryDSL 기반 영속성 구현
-domain                -> 순수 도메인 모델
+    subgraph board[board 컨텍스트]
+        direction LR
+        bweb[웹 어댑터] --> bin[입구 포트] --> bsvc[BoardService] --> bdomain[Board]
+        bsvc --> bout[출구 포트] --> bdb[JPA 어댑터]
+        bout --> bmember[MemberAuthorAdapter]
+    end
+
+    client --> mweb
+    client --> bweb
+    bmember -- "회원 입구 포트만 부른다" --> min
+    mdb --> db[(MariaDB)]
+    bdb --> db
 ```
 
-### 핵심 적용 개념
+화살표는 "누가 누구를 아는지"를 뜻한다. 도메인(`Member`, `Board`)에서 나가는 화살표는 없다.
 
-- **DDD**: `member`, `board` 도메인을 분리해 모델과 유스케이스를 구성합니다.
-- **Hexagonal Architecture**: 웹/DB는 어댑터에 위치하고, 애플리케이션 서비스는 포트를 통해서만 외부와 통신합니다.
-- **CQRS**: 조회와 변경 책임을 포트 단위로 분리합니다.
-- **TDD 친화 구조**: 서비스 단위 테스트와 컨트롤러/영속성 통합 테스트를 함께 둘 수 있도록 구성되어 있습니다.
+| 층 | 패키지 | 하는 일 |
+|---|---|---|
+| 도메인 | `domain` | 규칙을 지킨다. 순수 자바 클래스다 |
+| 입구 포트 | `application.port.in` | 바깥이 부를 수 있는 유스케이스 목록이다 |
+| 서비스 | `application.service` | 유스케이스를 처리한다. 저장소에서 꺼내 도메인에게 일을 시키고 다시 저장한다 |
+| 출구 포트 | `application.port.out` | 서비스가 바깥(DB, 토큰, 다른 컨텍스트)에 바라는 것을 적은 인터페이스다 |
+| 어댑터 | `adapter.in`, `adapter.out` | HTTP와 DB 같은 바깥 기술을 포트에 잇는다 |
 
----
+## 의존 규칙은 테스트가 지킨다
 
-## 3. Domain
+`HexagonalArchitectureTest`가 아래 규칙을 검사한다. 어기면 빌드가 실패한다. 도메인에 `@Component`를 일부러 붙여서 실제로 실패하는 것도 확인했다.
 
-### Member
+- 도메인은 스프링, JPA, Swagger, Lombok을 모른다
+- 도메인은 애플리케이션과 어댑터를 모른다
+- 애플리케이션은 어댑터를 모른다
+- 게시판의 웹 어댑터는 회원 컨텍스트를 모른다
+- 게시판은 회원의 도메인과 저장소를 직접 쓰지 않는다
 
-회원 도메인은 다음 정보를 관리합니다.
+## 작업 흐름
 
-- `id` (ULID)
-- `email`
-- `password` (저장 시 BCrypt 인코딩)
-- `name`
-- `gender` (`MALE`, `FEMALE`)
-- `phoneNumber`
-- `address`
-- 소프트 삭제 필드 (`isDeleted`, `deletedAt`)
-- 생성/수정 시각
+이번 정리는 PR 다섯 개로 나눠 올렸다. 리팩터링 PR보다 버그 수정 PR을 먼저 올렸는데, 리팩터링은 동작을 바꾸지 않는 작업이라서 고친 동작을 테스트로 먼저 고정해 둬야 안전하기 때문이다.
 
-### Board
+| 순서 | 브랜치 | 내용 |
+|---|---|---|
+| 1 | `chore/upgrade-build` | Spring Boot 4.1, Java 25로 올렸다. DB 접속 정보를 환경변수로 옮겼다 |
+| 2 | `fix/soft-delete-queries` | 지운 글과 탈퇴한 회원이 조회에 섞이던 버그, 내부 클래스 이름이 응답에 나가던 버그를 고쳤다 |
+| 3 | `refactor/hexagonal-domain` | 규칙을 도메인으로 옮기고 의존 방향을 바로잡았다. API는 바꾸지 않았다 |
+| 4 | `feat/jwt-auth` | 로그인과 JWT를 붙였다. 글쓴이를 요청 본문이 아니라 토큰으로 정한다 |
+| 5 | `docs/readme` | 이 문서다 |
 
-게시글 도메인은 다음 정보를 관리합니다.
+버그를 고칠 때는 커밋을 두 개로 나눴다. 먼저 `test:` 커밋에 버그를 재현하는 테스트가 실패하는 상태를 남기고, 다음 `fix:` 커밋에서 고쳐서 통과시켰다. 커밋 이력을 따라가면 무엇이 왜 실패했는지 볼 수 있다.
 
-- `id` (ULID)
-- `title`
-- `content`
-- `memberId` (작성자 회원 ID)
-- 소프트 삭제 필드 (`isDeleted`, `deletedAt`)
-- 생성/수정 시각
+## 고친 버그
 
----
+| 버그 | 원인 | 막는 테스트 |
+|---|---|---|
+| 지운 글이 단건 조회에서 200으로 나온다 | 단건 조회가 삭제 여부를 보지 않았다 | `SoftDeleteAndSearchRegressionTest` |
+| 목록 전체 개수에 지운 글과 탈퇴한 회원이 들어간다 | 개수 쿼리에만 삭제 조건이 빠졌다 | `SoftDeleteAndSearchRegressionTest` |
+| 성별을 소문자로 검색하면 500 오류가 난다 | 검사는 대소문자를 무시했는데 변환은 무시하지 않았다 | `SoftDeleteAndSearchRegressionTest` |
+| 이미 가입된 이메일로 다시 가입된다 | 중복 확인이 없었다 | `SoftDeleteAndSearchRegressionTest` |
+| 없는 회원으로 글을 쓰면 응답에 JPA 엔티티의 클래스 이름과 패키지가 나간다 | `getReferenceById`가 던진 예외 메시지를 그대로 응답했다 | `ErrorMessageLeakRegressionTest` |
+| 다른 회원의 ID를 넣으면 그 회원 이름으로 글을 쓸 수 있다 | 요청 본문의 `memberId`를 믿었다 | `BoardRestControllerTest` |
+| 다른 회원이 글을 지울 수 있다 | 삭제할 때 글쓴이를 확인하지 않았다 | `BoardRestControllerTest` |
+| 글 5개 목록에 쿼리가 7번 나간다 | 글마다 글쓴이를 따로 조회했다 | `BoardAuthorRegressionTest` |
+| 글 응답에 글쓴이의 이메일, 전화번호, 주소가 담긴다 | 회원 응답 DTO를 그대로 넣었다 | `BoardAuthorRegressionTest` |
+| 글쓴이가 탈퇴하면 그 글도 404가 된다 | 글쓴이를 찾지 못하면 예외를 던졌다 | `BoardAuthorRegressionTest` |
 
-## 4. Features
-
-### Member API
-
-- 회원 생성
-- 회원 단건 조회
-- 회원 페이징 목록 조회
-- 회원 수정
-- 회원 삭제 (soft delete)
-- 조건 기반 회원 검색 지원 (`MemberSearchRequest`)
-
-### Board API
-
-- 게시글 생성
-- 게시글 단건 조회
-- 게시글 페이징 목록 조회
-- 게시글 수정
-- 게시글 삭제 (soft delete)
-- 게시글 응답에 작성자 정보 조합
-
----
-
-## 5. Project Structure
-
-```text
-src/main/java/com/example/demo
-├── board
-│   ├── adapter
-│   │   ├── in/web
-│   │   └── out/persistence
-│   ├── application
-│   │   ├── port/in
-│   │   ├── port/out
-│   │   └── service
-│   └── domain
-├── member
-│   ├── adapter
-│   │   ├── in/web
-│   │   └── out/persistence
-│   ├── application
-│   │   ├── port/in
-│   │   ├── port/out
-│   │   └── service
-│   └── domain
-├── common
-│   ├── exception
-│   ├── jpa
-│   └── response
-└── config
-```
-
----
-
-## 6. Running the Application
-
-### Prerequisites
-
-- JDK 21
-- Docker (통합 테스트 실행 시 필요)
-- MariaDB 로컬 인스턴스 (로컬 프로필 실행 시 필요)
-
-### 6.1 Local profile 설정
-
-로컬 실행 시 `application-db.yml`의 `local` 프로필 설정을 사용합니다.
-
-기본값:
-
-- DB URL: `jdbc:mariadb://localhost:3306/local?serverTimezone=Asia/Seoul`
-- Port: `8099`
-
-애플리케이션 실행 예시:
-
-```bash
-./gradlew bootRun --args='--spring.profiles.active=local'
-```
-
-또는:
-
-```bash
-SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
-```
-
-> `application.yml`에서 `spring.profiles.active`는 외부 환경값으로 주입받도록 되어 있으므로, 실행 시 프로필을 반드시 지정하는 것이 안전합니다.
-
-### 6.2 테스트 실행
+## 테스트
 
 ```bash
 ./gradlew test
 ```
 
-테스트는 `test` 프로필과 Testcontainers 기반 MariaDB 컨테이너를 사용합니다.
+Docker가 켜져 있어야 한다. 테스트는 모두 55개다.
 
----
+| 종류 | 예시 | 확인하는 것 |
+|---|---|---|
+| 도메인 단위 테스트 | `MemberTest`, `BoardTest` | 탈퇴, 글쓴이 확인 같은 규칙. 스프링 없이 돈다 |
+| 서비스 테스트 | `MemberServiceTest`, `BoardServiceTest` | 유스케이스 흐름. 포트를 메모리로 구현한 가짜를 써서, 포트를 불렀는지가 아니라 결과가 맞는지 본다 |
+| 영속성 어댑터 테스트 | `MemberPersistenceAdapterTest` | MariaDB 컨테이너에서 실제 쿼리를 돌린다 |
+| API 테스트 | `BoardRestControllerTest`, `regression` 패키지 | 경로, 상태 코드, JSON 모양 |
+| 아키텍처 테스트 | `HexagonalArchitectureTest` | 의존 방향 |
 
-## 7. Database & Migration
+## 실행
 
-Flyway 마이그레이션은 `src/main/resources/db/migration` 아래에서 관리됩니다.
+Java 25와 Docker가 필요하다.
 
-- `V1__create_member_table.sql`: 회원 테이블 생성
-- `V2__create_board_table.sql`: 게시글 테이블 생성
-- `V3__add_member_dummy.sql`: 대량 회원 더미 데이터 삽입
-
-### 참고 사항
-
-`V3__add_member_dummy.sql`에는 대량의 더미 회원 데이터가 포함되어 있어, 로컬 환경이나 테스트 실행 시간/초기 적재량에 영향을 줄 수 있습니다. 대규모 조회 성능 실험이나 페이징/CQRS 검증 목적의 데이터셋으로 이해하면 됩니다.
-
----
-
-## 8. API Documentation
-
-Swagger UI는 아래 경로에서 확인할 수 있습니다.
-
-- Swagger UI: `http://localhost:8099/swagger-ui.html`
-- OpenAPI Docs: `http://localhost:8099/v1/api-docs`
-
-Spring Security 설정상 아래 경로는 인증 없이 접근 가능합니다.
-
-- `/v1/api-docs/**`
-- `/swagger-ui.html`
-- `/swagger-ui/**`
-- `/v1/member/**`
-- `/v1/board/**`
-
----
-
-## 9. Example API Endpoints
-
-### Member
-
-- `GET /v1/member/page`
-- `GET /v1/member?id={memberId}`
-- `POST /v1/member`
-- `PUT /v1/member/{id}`
-- `DELETE /v1/member?id={memberId}`
-
-예시 요청:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "QWERasdf1234!",
-  "name": "홍길동",
-  "gender": "MALE",
-  "phoneNumber": "010-1234-5678",
-  "address": "서울특별시 강남구 테헤란로 123"
-}
+```bash
+cp .env.example .env     # 빈칸(DB_PASSWORD, DB_ROOT_PASSWORD, JWT_SECRET)을 채운다
+docker compose up -d     # MariaDB
+./gradlew bootRun
 ```
 
-### Board
+local 프로필에서는 더미 회원 20만 건(`db/dummy`)을 함께 넣어서 처음 실행할 때 시간이 조금 걸린다. 테스트에서는 넣지 않는다.
 
-- `GET /v1/board/page`
-- `GET /v1/board?id={boardId}`
-- `POST /v1/board`
-- `PUT /v1/board/{id}`
-- `DELETE /v1/board?id={boardId}`
+Swagger UI는 http://localhost:8099/swagger-ui.html 에 있다.
 
-예시 요청:
+## API
 
-```json
-{
-  "title": "가입인사",
-  "content": "가입인사 작성합니다. 만나서 반갑습니다.",
-  "memberId": "01JWG8S471E52NTHD6T1G51F6M"
-}
-```
+목록의 `page`는 1부터 센다. 오류는 `{"code": "...", "message": "..."}` 모양으로 응답한다.
 
----
+| 메서드 | 경로 | 누가 | 설명 |
+|---|---|---|---|
+| POST | `/v1/members` | 누구나 | 회원가입 |
+| POST | `/v1/auth/login` | 누구나 | 로그인. 액세스 토큰을 준다 |
+| GET, PATCH, DELETE | `/v1/members/me` | 로그인한 회원 | 내 정보 보기, 연락처 고치기, 탈퇴 |
+| GET | `/v1/admin/members` | 관리자 | 회원 검색(이메일, 이름, 성별), 페이징, 정렬 |
+| GET | `/v1/admin/members/{memberId}` | 관리자 | 회원 한 명 보기 |
+| GET | `/v1/boards`, `/v1/boards/{boardId}` | 누구나 | 게시글 목록, 한 개 보기 |
+| POST | `/v1/boards` | 로그인한 회원 | 게시글 쓰기 |
+| PATCH, DELETE | `/v1/boards/{boardId}` | 글쓴이 | 게시글 고치기, 지우기 |
 
-## 10. Testing Strategy
+## 아직 남은 것
 
-이 프로젝트는 다음 수준의 테스트를 함께 사용합니다.
-
-- **Application Service 테스트**: 유스케이스 로직 검증
-- **Persistence Adapter 테스트**: DB 연동 및 매핑 검증
-- **Controller 통합 테스트**: MockMvc 기반 HTTP 레벨 검증
-- **Testcontainers**: 실제 MariaDB 컨테이너를 사용해 운영 환경과 유사한 검증 수행
-
-즉, 단순 단위 테스트뿐 아니라 **실제 인프라와 붙는 통합 테스트 흐름**을 중요하게 다루는 예제입니다.
-
----
-
-## 11. Why this repository exists
-
-이 저장소는 아래 목적에 특히 잘 맞습니다.
-
-- Spring Boot에서 **DDD + Hexagonal Architecture** 구조를 어떻게 나눌지 실험하고 싶을 때
-- JPA와 QueryDSL을 함께 쓰면서 **조회/명령 책임을 분리**해보고 싶을 때
-- Flyway와 Testcontainers를 함께 사용해 **재현 가능한 개발 환경**을 만들고 싶을 때
-- 회원/게시글 같은 익숙한 도메인으로 **아키텍처 중심 PoC**를 빠르게 만들고 싶을 때
-
----
-
-## 12. Notes
-
-- `src/main/generated` 아래에는 생성된 매퍼/QueryDSL 관련 코드가 포함되어 있습니다.
-- `UpdateMemberResponse.kt`처럼 일부 Kotlin 파일이 공존하지만, 애플리케이션의 중심 구현은 Java입니다.
-- 현재 저장소는 PoC 성격이 강하므로, 인증/인가 고도화나 운영용 설정 분리 등은 추가 확장이 필요한 영역입니다.
+- 리프레시 토큰이 없어서 30분마다 다시 로그인해야 한다.
+- 탈퇴해도 이미 받은 액세스 토큰은 만료될 때까지 거절되지 않는다. 글쓰기는 탈퇴 확인에서 막힌다.
+- 관리자 계정은 API로 만들 수 없고 DB에서 `role`을 바꿔야 한다.
+- `board.member_id`의 외래 키는 그대로 두었다. 코드는 회원을 ID로만 가리키지만, 두 컨텍스트가 같은 DB를 쓰는 동안은 DB에서도 무결성을 지키는 편이 낫다고 보았다.
