@@ -1,6 +1,6 @@
-# architecture-tdd-ddd-poc
+# hexagonal-board-api
 
-회원과 게시글 API를 헥사고날 아키텍처로 만든 Spring Boot 프로젝트다.
+회원과 게시글 API를 헥사고날 아키텍처로 만든 Spring Boot 프로젝트다. 예전 이름은 `architecture-tdd-ddd-poc`다.
 
 이 저장소는 두 가지를 보여 주려고 만들었다.
 
