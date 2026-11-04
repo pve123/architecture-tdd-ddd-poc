@@ -34,6 +34,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # 쿼리 수를 세는 테스트(N+1 확인)에 씁니다.
+        generate_statistics: true
   flyway:
     enabled: true
     locations: classpath:db/migration
