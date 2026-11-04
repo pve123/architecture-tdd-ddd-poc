@@ -7,7 +7,8 @@ public enum MemberErrorCode implements ErrorCode {
 
     MEMBER_NOT_FOUND("MEMBER_001", "해당 사용자를 찾을수 없습니다.", ErrorType.NOT_FOUND),
     MEMBER_WITHDRAWN("MEMBER_002", "탈퇴한 사용자입니다.", ErrorType.BAD_REQUEST),
-    EMAIL_DUPLICATED("MEMBER_003", "이미 가입된 이메일입니다.", ErrorType.CONFLICT);
+    EMAIL_DUPLICATED("MEMBER_003", "이미 가입된 이메일입니다.", ErrorType.CONFLICT),
+    LOGIN_FAILED("MEMBER_004", "이메일 또는 비밀번호가 맞지 않습니다.", ErrorType.UNAUTHORIZED);
 
     private final String code;
     private final String message;

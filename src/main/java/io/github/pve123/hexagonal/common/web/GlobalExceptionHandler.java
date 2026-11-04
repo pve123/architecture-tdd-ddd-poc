@@ -56,6 +56,7 @@ public class GlobalExceptionHandler {
     private static HttpStatus toHttpStatus(ErrorType type) {
         return switch (type) {
             case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
+            case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case CONFLICT -> HttpStatus.CONFLICT;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;

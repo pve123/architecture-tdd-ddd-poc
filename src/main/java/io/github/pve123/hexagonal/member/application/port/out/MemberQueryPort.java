@@ -19,6 +19,9 @@ public interface MemberQueryPort {
     /** 탈퇴한 회원도 찾습니다. 탈퇴 여부를 구분해야 할 때 씁니다. */
     Optional<Member> findById(String memberId);
 
+    /** 로그인할 때 씁니다. 탈퇴한 회원은 찾지 않습니다. */
+    Optional<Member> findActiveByEmail(String email);
+
     boolean existsByEmail(String email);
 
     boolean existsByEmailOfOtherMember(String email, String memberId);

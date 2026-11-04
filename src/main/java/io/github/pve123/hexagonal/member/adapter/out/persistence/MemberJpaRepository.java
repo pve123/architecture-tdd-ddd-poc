@@ -8,6 +8,8 @@ interface MemberJpaRepository extends JpaRepository<MemberJpaEntity, String> {
 
     Optional<MemberJpaEntity> findByIdAndIsDeletedFalse(String id);
 
+    Optional<MemberJpaEntity> findByEmailAndIsDeletedFalse(String email);
+
     boolean existsByEmail(String email);
 
     boolean existsByEmailAndIdNot(String email, String id);

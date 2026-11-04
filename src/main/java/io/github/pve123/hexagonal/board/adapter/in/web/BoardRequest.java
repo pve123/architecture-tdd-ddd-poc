@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** 게시글 API가 받는 요청 모양을 모아 둡니다. */
+/** 게시글 API가 받는 요청 모양을 모아 둡니다. 글쓴이는 요청 본문이 아니라 토큰으로 정합니다. */
 final class BoardRequest {
 
     private BoardRequest() {
@@ -20,13 +20,9 @@ final class BoardRequest {
 
             @Schema(example = "가입인사 작성합니다. 만나서 반갑습니다.")
             @NotBlank(message = "내용은 필수입니다.")
-            String content,
-
-            @NotBlank(message = "사용자 고유 ID는 필수입니다.")
-            @Size(min = 26, max = 26, message = "사용자 ID는 26자입니다.")
-            String memberId
+            String content
     ) {
-        CreateBoardUseCase.Command toCommand() {
+        CreateBoardUseCase.Command toCommand(String memberId) {
             return new CreateBoardUseCase.Command(memberId, title, content);
         }
     }
@@ -37,13 +33,9 @@ final class BoardRequest {
             String title,
 
             @NotBlank(message = "내용은 필수입니다.")
-            String content,
-
-            @NotBlank(message = "사용자 고유 ID는 필수입니다.")
-            @Size(min = 26, max = 26, message = "사용자 ID는 26자입니다.")
-            String memberId
+            String content
     ) {
-        UpdateBoardUseCase.Command toCommand(String boardId) {
+        UpdateBoardUseCase.Command toCommand(String boardId, String memberId) {
             return new UpdateBoardUseCase.Command(boardId, memberId, title, content);
         }
     }

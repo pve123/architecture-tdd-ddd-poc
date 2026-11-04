@@ -6,7 +6,7 @@ import io.github.pve123.hexagonal.common.error.ErrorType;
 public enum BoardErrorCode implements ErrorCode {
 
     POST_NOT_FOUND("BOARD_001", "해당 게시글을 찾을수 없습니다.", ErrorType.NOT_FOUND),
-    POST_AUTHOR_MISMATCH("BOARD_003", "수정 권한 없음", ErrorType.BAD_REQUEST);
+    POST_AUTHOR_MISMATCH("BOARD_003", "글쓴이만 고치거나 지울 수 있습니다.", ErrorType.FORBIDDEN);
 
     private final String code;
     private final String message;

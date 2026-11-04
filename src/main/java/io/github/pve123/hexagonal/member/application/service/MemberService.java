@@ -6,9 +6,11 @@ import io.github.pve123.hexagonal.member.application.port.in.CreateMemberUseCase
 import io.github.pve123.hexagonal.member.application.port.in.DeleteMemberUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.GetMemberUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.GetMembersUseCase;
+import io.github.pve123.hexagonal.member.application.port.in.LoginUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.UpdateMemberUseCase;
 import io.github.pve123.hexagonal.member.application.port.out.MemberCommandPort;
 import io.github.pve123.hexagonal.member.application.port.out.MemberQueryPort;
+import io.github.pve123.hexagonal.member.application.port.out.TokenIssuerPort;
 import io.github.pve123.hexagonal.member.domain.Member;
 import io.github.pve123.hexagonal.member.domain.MemberErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +31,11 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MemberService implements CreateMemberUseCase, GetMemberUseCase, GetMembersUseCase,
-        UpdateMemberUseCase, DeleteMemberUseCase, CheckActiveMemberUseCase {
+        UpdateMemberUseCase, DeleteMemberUseCase, CheckActiveMemberUseCase, LoginUseCase {
 
     private final MemberQueryPort memberQueryPort;
     private final MemberCommandPort memberCommandPort;
+    private final TokenIssuerPort tokenIssuerPort;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
@@ -79,6 +82,15 @@ public class MemberService implements CreateMemberUseCase, GetMemberUseCase, Get
         Member member = findActiveMember(memberId);
         member.withdraw(LocalDateTime.now(clock));
         memberCommandPort.save(member);
+    }
+
+    @Override
+    public Token login(LoginUseCase.Command command) {
+        // 이메일이 없을 때와 비밀번호가 틀릴 때 같은 오류를 내서, 가입 여부를 알려 주지 않습니다.
+        Member member = memberQueryPort.findActiveByEmail(command.email())
+                .filter(found -> passwordEncoder.matches(command.rawPassword(), found.getPassword()))
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
+        return tokenIssuerPort.issue(member.getId(), member.getRole());
     }
 
     @Override

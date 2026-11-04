@@ -55,6 +55,11 @@ class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandPort {
     }
 
     @Override
+    public Optional<Member> findActiveByEmail(String email) {
+        return memberJpaRepository.findByEmailAndIsDeletedFalse(email).map(MemberJpaEntity::toDomain);
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         return memberJpaRepository.existsByEmail(email);
     }

@@ -20,6 +20,7 @@ repositories {
 ext {
     querydslVersion = '7.7'
     springdocVersion = '3.2.0'
+    jjwtVersion = '0.13.0'
 }
 
 dependencies {
@@ -30,6 +31,9 @@ dependencies {
 
     // 보안
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
 
     // 저장소
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

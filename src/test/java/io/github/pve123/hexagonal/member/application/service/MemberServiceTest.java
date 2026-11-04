@@ -2,6 +2,8 @@ package io.github.pve123.hexagonal.member.application.service;
 
 import io.github.pve123.hexagonal.common.error.BusinessException;
 import io.github.pve123.hexagonal.member.application.port.in.CreateMemberUseCase;
+import io.github.pve123.hexagonal.member.application.port.in.LoginUseCase;
+import io.github.pve123.hexagonal.member.application.port.in.LoginUseCase.Token;
 import io.github.pve123.hexagonal.member.application.port.in.UpdateMemberUseCase;
 import io.github.pve123.hexagonal.member.domain.Gender;
 import io.github.pve123.hexagonal.member.domain.Member;
@@ -31,7 +33,7 @@ class MemberServiceTest {
     @BeforeEach
     void setUp() {
         store = new InMemoryMemberStore();
-        memberService = new MemberService(store, store, passwordEncoder, FIXED_CLOCK);
+        memberService = new MemberService(store, store, (memberId, role) -> new Token("token-" + memberId, 1800), passwordEncoder, FIXED_CLOCK);
     }
 
     @Test
@@ -88,5 +90,17 @@ class MemberServiceTest {
     private static CreateMemberUseCase.Command createCommand(String email) {
         return new CreateMemberUseCase.Command(email, "QWERasdf1234!", "홍길동", Gender.MALE,
                 "010-1234-5678", "서울특별시 강남구 테헤란로 123");
+    }
+
+    @Test
+    void 비밀번호가_맞으면_토큰을_주고_틀리면_같은_오류를_낸다() {
+        Member member = memberService.createMember(createCommand("user@example.com"));
+
+        assertThat(memberService.login(new LoginUseCase.Command("user@example.com", "QWERasdf1234!")).accessToken())
+                .isEqualTo("token-" + member.getId());
+        assertThatThrownBy(() -> memberService.login(new LoginUseCase.Command("user@example.com", "wrong")))
+                .hasMessage(MemberErrorCode.LOGIN_FAILED.message());
+        assertThatThrownBy(() -> memberService.login(new LoginUseCase.Command("nobody@example.com", "QWERasdf1234!")))
+                .hasMessage(MemberErrorCode.LOGIN_FAILED.message());
     }
 }

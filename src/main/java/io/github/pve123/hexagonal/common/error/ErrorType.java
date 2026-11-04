@@ -6,6 +6,7 @@ package io.github.pve123.hexagonal.common.error;
  */
 public enum ErrorType {
     BAD_REQUEST,
+    UNAUTHORIZED,
     NOT_FOUND,
     CONFLICT,
     FORBIDDEN

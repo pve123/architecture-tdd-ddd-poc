@@ -1,104 +1,97 @@
 package io.github.pve123.hexagonal.member.adapter.in.web;
 
-import com.jayway.jsonpath.JsonPath;
-import io.github.pve123.hexagonal.config.TestContainerConfig;
+import io.github.pve123.hexagonal.config.ApiTestSupport;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** 회원 API의 계약(경로, 상태 코드, JSON 모양)을 지킵니다. */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Transactional
-class MemberRestControllerTest extends TestContainerConfig {
-
-    @Autowired
-    private MockMvc mockMvc;
+class MemberRestControllerTest extends ApiTestSupport {
 
     @Test
     void 가입하면_비밀번호_없이_회원_정보를_돌려준다() throws Exception {
-        mockMvc.perform(post("/v1/member").contentType(MediaType.APPLICATION_JSON).content(memberJson("user@example.com")))
+        mockMvc.perform(post("/v1/members").contentType(MediaType.APPLICATION_JSON).content(memberJson("user@example.com")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty())
                 .andExpect(jsonPath("$.email").value("user@example.com"))
-                .andExpect(jsonPath("$.gender").value("MALE"))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
 
     @Test
-    void 비밀번호_규칙에_맞지_않으면_400으로_응답한다() throws Exception {
-        mockMvc.perform(post("/v1/member").contentType(MediaType.APPLICATION_JSON)
-                        .content(memberJson("user@example.com").replace("QWERasdf1234!", "weak")))
+    void 비밀번호_규칙에_맞지_않으면_가입할_수_없다() throws Exception {
+        mockMvc.perform(post("/v1/members").contentType(MediaType.APPLICATION_JSON)
+                        .content(memberJson("user@example.com").replace(PASSWORD, "weak")))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void 회원_한_명과_목록을_볼_수_있다() throws Exception {
-        String id = createMember("user@example.com");
+    void 비밀번호가_틀리면_로그인할_수_없다() throws Exception {
+        signUp("user@example.com");
 
-        mockMvc.perform(get("/v1/member").param("id", id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.name").value("홍길동"));
-        mockMvc.perform(get("/v1/member/page"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value(id))
-                .andExpect(jsonPath("$.content[0].email").value("user@example.com"));
+        mockMvc.perform(post("/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"email": "user@example.com", "password": "wrong-password"}
+                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("MEMBER_004"));
     }
 
     @Test
-    void 연락처를_고칠_수_있다() throws Exception {
-        String id = createMember("user@example.com");
+    void 토큰_없이_내_정보를_보면_401로_응답한다() throws Exception {
+        mockMvc.perform(get("/v1/members/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("COMMON_401"));
+    }
 
-        mockMvc.perform(put("/v1/member/{id}", id).contentType(MediaType.APPLICATION_JSON).content("""
-                        {"email": "usertest@example.com", "phoneNumber": "010-1234-9999", "address": "서울특별시 강남구 테헤란로 999"}
+    @Test
+    void 로그인하면_내_정보를_보고_고칠_수_있다() throws Exception {
+        String token = signUpAndLogin("user@example.com");
+
+        mockMvc.perform(as(token, get("/v1/members/me")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("user@example.com"));
+        mockMvc.perform(as(token, patch("/v1/members/me")).contentType(MediaType.APPLICATION_JSON).content("""
+                        {"phoneNumber": "010-1234-9999"}
                         """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("usertest@example.com"))
-                .andExpect(jsonPath("$.phoneNumber").value("010-1234-9999"))
-                .andExpect(jsonPath("$.address").value("서울특별시 강남구 테헤란로 999"));
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.phoneNumber").value("010-1234-9999"));
     }
 
     @Test
-    void 탈퇴하면_다시_조회되지_않는다() throws Exception {
-        String id = createMember("user@example.com");
+    void 탈퇴하면_다시_로그인할_수_없다() throws Exception {
+        String token = signUpAndLogin("user@example.com");
 
-        mockMvc.perform(delete("/v1/member").param("id", id))
+        mockMvc.perform(as(token, delete("/v1/members/me")))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(get("/v1/member").param("id", id))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("MEMBER_001"));
+        mockMvc.perform(post("/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"email": "user@example.com", "password": "%s"}
+                        """.formatted(PASSWORD)))
+                .andExpect(status().isUnauthorized());
     }
 
-    private String createMember(String email) throws Exception {
-        String body = mockMvc.perform(post("/v1/member").contentType(MediaType.APPLICATION_JSON).content(memberJson(email)))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        return JsonPath.read(body, "$.id");
+    @Test
+    void 일반_회원은_회원_목록을_볼_수_없다() throws Exception {
+        String token = signUpAndLogin("user@example.com");
+
+        mockMvc.perform(as(token, get("/v1/admin/members")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("COMMON_403"));
     }
 
-    static String memberJson(String email) {
-        return """
-                {
-                  "email": "%s",
-                  "password": "QWERasdf1234!",
-                  "name": "홍길동",
-                  "gender": "MALE",
-                  "phoneNumber": "010-1234-5678",
-                  "address": "서울특별시 강남구 테헤란로 123"
-                }
-                """.formatted(email);
+    @Test
+    void 관리자는_회원을_검색할_수_있다() throws Exception {
+        signUp("kim@example.com");
+        String adminToken = signUpAdminAndLogin("admin@example.com");
+
+        mockMvc.perform(as(adminToken, get("/v1/admin/members")).param("email", "kim"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.content[0].email").value("kim@example.com"));
     }
 }

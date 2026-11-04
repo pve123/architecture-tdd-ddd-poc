@@ -3,6 +3,7 @@ package io.github.pve123.hexagonal.member.adapter.out.persistence;
 import io.github.pve123.hexagonal.common.jpa.BaseTimeEntity;
 import io.github.pve123.hexagonal.member.domain.Gender;
 import io.github.pve123.hexagonal.member.domain.Member;
+import io.github.pve123.hexagonal.member.domain.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,6 +48,10 @@ class MemberJpaEntity extends BaseTimeEntity implements Persistable<String> {
     @Column(nullable = false, length = 200)
     private String address;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Role role;
+
     @Column(nullable = false)
     private boolean isDeleted;
 
@@ -58,6 +63,7 @@ class MemberJpaEntity extends BaseTimeEntity implements Persistable<String> {
         entity.password = member.getPassword();
         entity.name = member.getName();
         entity.gender = member.getGender();
+        entity.role = member.getRole();
         entity.apply(member);
         return entity;
     }
@@ -73,7 +79,7 @@ class MemberJpaEntity extends BaseTimeEntity implements Persistable<String> {
 
     Member toDomain() {
         return Member.restore(id, email, password, name, gender, phoneNumber, address,
-                isDeleted, deletedAt, createdAt, updatedAt);
+                role, isDeleted, deletedAt, createdAt, updatedAt);
     }
 
     @Override

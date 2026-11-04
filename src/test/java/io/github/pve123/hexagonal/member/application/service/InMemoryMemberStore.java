@@ -38,6 +38,13 @@ class InMemoryMemberStore implements MemberQueryPort, MemberCommandPort {
     }
 
     @Override
+    public Optional<Member> findActiveByEmail(String email) {
+        return members.values().stream()
+                .filter(member -> member.getEmail().equals(email) && !member.isDeleted())
+                .findFirst();
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         return members.values().stream().anyMatch(member -> member.getEmail().equals(email));
     }
