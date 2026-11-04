@@ -19,7 +19,7 @@ public class MemberSearchPredicateFactory {
 
     public BooleanExpression searchByGenderKeyword(QMemberJpaEntity qMemberJpaEntity, String gender) {
         return StringUtils.hasText(gender) && EnumUtils.isValidEnumIgnoreCase(GenderEnum.class, gender) ?
-                qMemberJpaEntity.gender.eq(GenderEnum.valueOf(gender)) :
+                qMemberJpaEntity.gender.eq(EnumUtils.getEnumIgnoreCase(GenderEnum.class, gender)) :
                 null;
     }
 

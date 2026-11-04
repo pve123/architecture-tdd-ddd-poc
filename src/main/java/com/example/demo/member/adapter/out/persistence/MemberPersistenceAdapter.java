@@ -55,7 +55,8 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
                 .select(qMemberJpaEntity.count())
                 .where(memberSearchPredicateFactory.searchByEmailKeyword(qMemberJpaEntity, memberSearchRequest.email()),
                         memberSearchPredicateFactory.searchByNameKeyword(qMemberJpaEntity, memberSearchRequest.name()),
-                        memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()))
+                        memberSearchPredicateFactory.searchByGenderKeyword(qMemberJpaEntity, memberSearchRequest.gender()),
+                        qMemberJpaEntity.isDeleted.eq(false))
                 .from(qMemberJpaEntity)
                 .fetchOne();
 
@@ -68,6 +69,16 @@ public class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandP
                 .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
         Member resultMember = memberPersistenceMapper.toDomain(memberJpaEntity);
         return resultMember;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return memberRepository.existsByEmail(email);
+    }
+
+    @Override
+    public boolean existsByEmailOfOtherMember(String email, String memberId) {
+        return memberRepository.existsByEmailAndIdNot(email, memberId);
     }
 
     @Override

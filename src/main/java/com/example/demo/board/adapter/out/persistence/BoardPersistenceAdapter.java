@@ -49,6 +49,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
         Long total = queryFactory
                 .select(qBoardJpaEntity.count())
                 .from(qBoardJpaEntity)
+                .where(qBoardJpaEntity.isDeleted.eq(false))
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, ObjectUtils.isNotEmpty(total) ? total : 0);
@@ -56,7 +57,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
 
     @Override
     public Board findById(String id) {
-        BoardJpaEntity boardJpaEntity = boardRepository.findById(id)
+        BoardJpaEntity boardJpaEntity = boardRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
         Board resultBoard = boardPersistenceMapper.toDomain(boardJpaEntity);
         return resultBoard;
@@ -80,7 +81,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Transactional
     public Board update(Board board) {
         MemberJpaEntity memberJpaEntity = memberRepository.getReferenceById(board.getMemberId());
-        BoardJpaEntity boardJpaEntity = boardRepository.findById(board.getId()).orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
+        BoardJpaEntity boardJpaEntity = boardRepository.findByIdAndIsDeletedFalse(board.getId()).orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
         if (memberJpaEntity.getIsDeleted().equals(Boolean.TRUE)) {
             throw new BusinessException(MemberErrorCodeEnum.MEMBER_WITHDRAWN);
         } else if (!memberJpaEntity.getId().equals(boardJpaEntity.getMember().getId())) {
@@ -94,7 +95,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Override
     @Transactional
     public void softDeleteById(String id) {
-        BoardJpaEntity boardJpaEntity = boardRepository.findById(id)
+        BoardJpaEntity boardJpaEntity = boardRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
         boardJpaEntity.softDeleted();
     }

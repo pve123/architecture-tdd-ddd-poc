@@ -12,4 +12,9 @@ public interface MemberQueryPort {
 
     Member findById(String id);
 
+    boolean existsByEmail(String email);
+
+    /** 이메일을 바꿀 때, 같은 이메일을 다른 회원이 쓰고 있는지 확인합니다. */
+    boolean existsByEmailOfOtherMember(String email, String memberId);
+
 }
