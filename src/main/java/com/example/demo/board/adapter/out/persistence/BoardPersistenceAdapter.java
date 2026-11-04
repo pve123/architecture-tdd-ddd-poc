@@ -66,7 +66,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Override
     @Transactional
     public Board save(Board board) {
-        MemberJpaEntity memberJpaEntity = memberRepository.getReferenceById(board.getMemberId());
+        MemberJpaEntity memberJpaEntity = findAuthor(board.getMemberId());
         if (memberJpaEntity.getIsDeleted().equals(Boolean.TRUE)) {
             throw new BusinessException(MemberErrorCodeEnum.MEMBER_WITHDRAWN);
         }
@@ -80,7 +80,7 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
     @Override
     @Transactional
     public Board update(Board board) {
-        MemberJpaEntity memberJpaEntity = memberRepository.getReferenceById(board.getMemberId());
+        MemberJpaEntity memberJpaEntity = findAuthor(board.getMemberId());
         BoardJpaEntity boardJpaEntity = boardRepository.findByIdAndIsDeletedFalse(board.getId()).orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
         if (memberJpaEntity.getIsDeleted().equals(Boolean.TRUE)) {
             throw new BusinessException(MemberErrorCodeEnum.MEMBER_WITHDRAWN);
@@ -98,5 +98,11 @@ public class BoardPersistenceAdapter implements BoardQueryPort, BoardCommandPort
         BoardJpaEntity boardJpaEntity = boardRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new BusinessException(BoardErrorCodeEnum.POST_NOT_FOUND));
         boardJpaEntity.softDeleted();
+    }
+
+    /** getReferenceById는 없는 회원이어도 프록시를 돌려주고, 나중에 내부 클래스 이름이 담긴 예외를 던져서 먼저 확인합니다. */
+    private MemberJpaEntity findAuthor(String memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCodeEnum.MEMBER_NOT_FOUND));
     }
 }
