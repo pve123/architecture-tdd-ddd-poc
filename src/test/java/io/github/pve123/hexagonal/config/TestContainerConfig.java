@@ -2,7 +2,12 @@ package io.github.pve123.hexagonal.config;
 
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.mariadb.MariaDBContainer;
+
+import java.security.SecureRandom;
+import java.util.Base64;
 
 /**
  * 테스트용 MariaDB를 도커로 띄웁니다.
@@ -18,5 +23,14 @@ public abstract class TestContainerConfig {
 
     static {
         mariaDBContainer.start();
+    }
+
+    /** JWT 서명 키는 테스트를 돌릴 때마다 새로 만들어서, 저장소에 키를 남기지 않습니다. */
+    @DynamicPropertySource
+    static void jwtSecret(DynamicPropertyRegistry registry) {
+        byte[] key = new byte[64];
+        new SecureRandom().nextBytes(key);
+        String secret = Base64.getEncoder().encodeToString(key);
+        registry.add("app.jwt.secret", () -> secret);
     }
 }

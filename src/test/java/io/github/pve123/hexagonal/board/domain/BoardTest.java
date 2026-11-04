@@ -38,9 +38,19 @@ class BoardTest {
         Board board = Board.write(WRITER_ID, "제목", "내용");
         LocalDateTime now = LocalDateTime.of(2026, 1, 1, 12, 0);
 
-        board.delete(now);
+        board.delete(WRITER_ID, now);
 
         assertThat(board.isDeleted()).isTrue();
         assertThat(board.getDeletedAt()).isEqualTo(now);
+    }
+
+    @Test
+    void 다른_회원은_글을_지울_수_없다() {
+        Board board = Board.write(WRITER_ID, "제목", "내용");
+
+        assertThatThrownBy(() -> board.delete(OTHER_ID, LocalDateTime.of(2026, 1, 1, 12, 0)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(BoardErrorCode.POST_AUTHOR_MISMATCH.message());
+        assertThat(board.isDeleted()).isFalse();
     }
 }

@@ -20,13 +20,14 @@ public class Member {
     private final Gender gender;
     private String phoneNumber;
     private String address;
+    private final Role role;
     private boolean deleted;
     private LocalDateTime deletedAt;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
     private Member(String id, String email, String password, String name, Gender gender,
-                   String phoneNumber, String address, boolean deleted, LocalDateTime deletedAt,
+                   String phoneNumber, String address, Role role, boolean deleted, LocalDateTime deletedAt,
                    LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.email = email;
@@ -35,25 +36,26 @@ public class Member {
         this.gender = gender;
         this.phoneNumber = phoneNumber;
         this.address = address;
+        this.role = role;
         this.deleted = deleted;
         this.deletedAt = deletedAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    /** 새 회원을 만듭니다. ID는 시간 순서로 정렬되는 ULID입니다. */
+    /** 새 회원을 만듭니다. ID는 시간 순서로 정렬되는 ULID이고, 권한은 일반 회원입니다. */
     public static Member register(String email, String encodedPassword, String name, Gender gender,
                                   String phoneNumber, String address) {
         return new Member(UlidCreator.getUlid().toString(), email, encodedPassword, name, gender,
-                phoneNumber, address, false, null, null, null);
+                phoneNumber, address, Role.USER, false, null, null, null);
     }
 
     /** 저장소에서 읽은 값으로 회원을 되살립니다. 어댑터만 씁니다. */
     public static Member restore(String id, String email, String password, String name, Gender gender,
-                                 String phoneNumber, String address, boolean deleted, LocalDateTime deletedAt,
+                                 String phoneNumber, String address, Role role, boolean deleted, LocalDateTime deletedAt,
                                  LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new Member(id, email, password, name, gender, phoneNumber, address,
-                deleted, deletedAt, createdAt, updatedAt);
+                role, deleted, deletedAt, createdAt, updatedAt);
     }
 
     /** 연락처를 바꿉니다. 비어 있는 값은 바꾸지 않고 그대로 둡니다. */
@@ -110,6 +112,10 @@ public class Member {
 
     public String getAddress() {
         return address;
+    }
+
+    public Role getRole() {
+        return role;
     }
 
     public boolean isDeleted() {

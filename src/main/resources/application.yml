@@ -13,5 +13,16 @@ spring:
       test:
         - db
 
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true
+        max-page-size: 100
+
 server:
   port: ${SERVER_PORT:8099}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-validity: 30m

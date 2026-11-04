@@ -3,6 +3,8 @@ package io.github.pve123.hexagonal.board.application.service;
 import io.github.pve123.hexagonal.board.application.port.in.CreateBoardUseCase;
 import io.github.pve123.hexagonal.board.application.port.in.UpdateBoardUseCase;
 import io.github.pve123.hexagonal.board.application.port.out.AuthorPort;
+import io.github.pve123.hexagonal.board.application.port.in.BoardView;
+import io.github.pve123.hexagonal.board.domain.Author;
 import io.github.pve123.hexagonal.board.domain.Board;
 import io.github.pve123.hexagonal.board.domain.BoardErrorCode;
 import io.github.pve123.hexagonal.common.error.BusinessException;
@@ -15,8 +17,11 @@ import org.springframework.data.domain.Pageable;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,11 +33,21 @@ class BoardServiceTest {
     private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-01-01T03:00:00Z"), ZoneId.of("Asia/Seoul"));
 
     private final Set<String> withdrawnMembers = new HashSet<>();
-    private final AuthorPort authorPort = memberId -> {
-        if (withdrawnMembers.contains(memberId)) {
-            throw new BusinessException(MemberErrorCode.MEMBER_WITHDRAWN);
+    private final AuthorPort authorPort = new AuthorPort() {
+        @Override
+        public void checkCanWrite(String memberId) {
+            if (withdrawnMembers.contains(memberId)) {
+                throw new BusinessException(MemberErrorCode.MEMBER_WITHDRAWN);
+            }
+        }
+
+        @Override
+        public Map<String, Author> findAuthors(Collection<String> memberIds) {
+            authorLookups++;
+            return memberIds.stream().collect(Collectors.toMap(id -> id, id -> new Author(id, "글쓴이")));
         }
     };
+    private int authorLookups;
     private InMemoryBoardStore store;
     private BoardService boardService;
 
@@ -44,11 +59,23 @@ class BoardServiceTest {
 
     @Test
     void 글을_쓰면_목록에_보인다() {
-        Board board = boardService.createBoard(new CreateBoardUseCase.Command(WRITER_ID, "제목", "내용"));
+        Board board = write();
 
         assertThat(boardService.getBoards(Pageable.unpaged()).getContent())
-                .extracting(Board::getId)
+                .extracting(view -> view.board().getId())
                 .containsExactly(board.getId());
+    }
+
+    @Test
+    void 목록의_글쓴이는_한_번에_모아서_찾는다() {
+        write();
+        write();
+        write();
+        authorLookups = 0;
+
+        boardService.getBoards(Pageable.unpaged());
+
+        assertThat(authorLookups).isEqualTo(1);
     }
 
     @Test
@@ -62,7 +89,7 @@ class BoardServiceTest {
 
     @Test
     void 다른_회원은_글을_고칠_수_없다() {
-        Board board = boardService.createBoard(new CreateBoardUseCase.Command(WRITER_ID, "제목", "내용"));
+        Board board = write();
 
         assertThatThrownBy(() -> boardService.updateBoard(
                 new UpdateBoardUseCase.Command(board.getId(), OTHER_ID, "바꾼 제목", "바꾼 내용")))
@@ -71,11 +98,16 @@ class BoardServiceTest {
 
     @Test
     void 지운_글은_다시_찾을_수_없다() {
-        Board board = boardService.createBoard(new CreateBoardUseCase.Command(WRITER_ID, "제목", "내용"));
+        Board board = write();
 
-        boardService.deleteBoard(board.getId());
+        boardService.deleteBoard(board.getId(), WRITER_ID);
 
         assertThatThrownBy(() -> boardService.getBoard(board.getId()))
                 .hasMessage(BoardErrorCode.POST_NOT_FOUND.message());
+    }
+
+    private Board write() {
+        BoardView view = boardService.createBoard(new CreateBoardUseCase.Command(WRITER_ID, "제목", "내용"));
+        return view.board();
     }
 }

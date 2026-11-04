@@ -1,26 +1,29 @@
 package io.github.pve123.hexagonal.board.adapter.in.web;
 
-import io.github.pve123.hexagonal.board.domain.Board;
-import io.github.pve123.hexagonal.member.adapter.in.web.MemberResponse;
+import io.github.pve123.hexagonal.board.application.port.in.BoardView;
 
 import java.time.LocalDateTime;
 
+/** 게시글 응답입니다. 글쓴이는 ID와 이름만 담습니다. */
 public record BoardResponse(
         String id,
         String title,
         String content,
-        MemberResponse member,
+        AuthorResponse author,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
 
-    static BoardResponse of(Board board, MemberResponse member) {
+    static BoardResponse from(BoardView view) {
         return new BoardResponse(
-                board.getId(),
-                board.getTitle(),
-                board.getContent(),
-                member,
-                board.getCreatedAt(),
-                board.getUpdatedAt());
+                view.board().getId(),
+                view.board().getTitle(),
+                view.board().getContent(),
+                new AuthorResponse(view.author().id(), view.author().name()),
+                view.board().getCreatedAt(),
+                view.board().getUpdatedAt());
+    }
+
+    public record AuthorResponse(String id, String name) {
     }
 }

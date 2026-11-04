@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,6 +53,16 @@ class MemberPersistenceAdapter implements MemberQueryPort, MemberCommandPort {
     @Override
     public Optional<Member> findById(String memberId) {
         return memberJpaRepository.findById(memberId).map(MemberJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<Member> findAllByIds(Collection<String> memberIds) {
+        return memberJpaRepository.findAllById(memberIds).stream().map(MemberJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public Optional<Member> findActiveByEmail(String email) {
+        return memberJpaRepository.findByEmailAndIsDeletedFalse(email).map(MemberJpaEntity::toDomain);
     }
 
     @Override

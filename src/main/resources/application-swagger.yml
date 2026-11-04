@@ -18,8 +18,9 @@ springdoc:
   group-configs:
     - group: 사용자
       paths-to-match:
-        - /v1/member/**
-        - /v1/board/**
+        - /v1/auth/**
+        - /v1/members/**
+        - /v1/boards/**
     - group: 관리자
       paths-to-match:
         - /v1/admin/**

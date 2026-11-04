@@ -46,21 +46,26 @@ public class Board {
 
     /** 글쓴이만 고칠 수 있습니다. */
     public void edit(String editorId, String title, String content) {
-        if (!isWrittenBy(editorId)) {
-            throw new BusinessException(BoardErrorCode.POST_AUTHOR_MISMATCH);
-        }
+        checkAuthor(editorId);
         this.title = title;
         this.content = content;
     }
 
-    /** 기록은 지우지 않고 삭제 표시만 남깁니다. */
-    public void delete(LocalDateTime now) {
+    /** 글쓴이만 지울 수 있습니다. 기록은 지우지 않고 삭제 표시만 남깁니다. */
+    public void delete(String requesterId, LocalDateTime now) {
+        checkAuthor(requesterId);
         this.deleted = true;
         this.deletedAt = now;
     }
 
     public boolean isWrittenBy(String memberId) {
         return this.memberId.equals(memberId);
+    }
+
+    private void checkAuthor(String memberId) {
+        if (!isWrittenBy(memberId)) {
+            throw new BusinessException(BoardErrorCode.POST_AUTHOR_MISMATCH);
+        }
     }
 
     public String getId() {

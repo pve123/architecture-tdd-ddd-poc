@@ -1,5 +1,6 @@
 package io.github.pve123.hexagonal.board.application.service;
 
+import io.github.pve123.hexagonal.board.application.port.in.BoardView;
 import io.github.pve123.hexagonal.board.application.port.in.CreateBoardUseCase;
 import io.github.pve123.hexagonal.board.application.port.in.DeleteBoardUseCase;
 import io.github.pve123.hexagonal.board.application.port.in.GetBoardUseCase;
@@ -8,6 +9,7 @@ import io.github.pve123.hexagonal.board.application.port.in.UpdateBoardUseCase;
 import io.github.pve123.hexagonal.board.application.port.out.AuthorPort;
 import io.github.pve123.hexagonal.board.application.port.out.BoardCommandPort;
 import io.github.pve123.hexagonal.board.application.port.out.BoardQueryPort;
+import io.github.pve123.hexagonal.board.domain.Author;
 import io.github.pve123.hexagonal.board.domain.Board;
 import io.github.pve123.hexagonal.board.domain.BoardErrorCode;
 import io.github.pve123.hexagonal.common.error.BusinessException;
@@ -19,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 /** 게시글 유스케이스를 처리합니다. 글쓴이 확인 같은 규칙은 Board가 지킵니다. */
 @Service
@@ -34,36 +38,49 @@ public class BoardService implements CreateBoardUseCase, GetBoardUseCase, GetBoa
 
     @Override
     @Transactional
-    public Board createBoard(CreateBoardUseCase.Command command) {
+    public BoardView createBoard(CreateBoardUseCase.Command command) {
         authorPort.checkCanWrite(command.memberId());
-        return boardCommandPort.save(Board.write(command.memberId(), command.title(), command.content()));
+        Board board = boardCommandPort.save(Board.write(command.memberId(), command.title(), command.content()));
+        return withAuthor(board);
     }
 
     @Override
-    public Board getBoard(String boardId) {
-        return findActiveBoard(boardId);
+    public BoardView getBoard(String boardId) {
+        return withAuthor(findActiveBoard(boardId));
     }
 
     @Override
-    public Page<Board> getBoards(Pageable pageable) {
-        return boardQueryPort.search(pageable);
+    public Page<BoardView> getBoards(Pageable pageable) {
+        Page<Board> boards = boardQueryPort.search(pageable);
+        Map<String, Author> authors = authorPort.findAuthors(
+                boards.getContent().stream().map(Board::getMemberId).distinct().toList());
+        return boards.map(board -> new BoardView(board, authorOf(board, authors)));
     }
 
     @Override
     @Transactional
-    public Board updateBoard(UpdateBoardUseCase.Command command) {
+    public BoardView updateBoard(UpdateBoardUseCase.Command command) {
         authorPort.checkCanWrite(command.memberId());
         Board board = findActiveBoard(command.boardId());
         board.edit(command.memberId(), command.title(), command.content());
-        return boardCommandPort.save(board);
+        return withAuthor(boardCommandPort.save(board));
     }
 
     @Override
     @Transactional
-    public void deleteBoard(String boardId) {
+    public void deleteBoard(String boardId, String requesterId) {
         Board board = findActiveBoard(boardId);
-        board.delete(LocalDateTime.now(clock));
+        board.delete(requesterId, LocalDateTime.now(clock));
         boardCommandPort.save(board);
+    }
+
+    private BoardView withAuthor(Board board) {
+        return new BoardView(board, authorOf(board, authorPort.findAuthors(List.of(board.getMemberId()))));
+    }
+
+    /** 회원 기록이 아예 없으면 탈퇴한 회원으로 보여 줍니다. */
+    private static Author authorOf(Board board, Map<String, Author> authors) {
+        return authors.getOrDefault(board.getMemberId(), Author.withdrawn(board.getMemberId()));
     }
 
     private Board findActiveBoard(String boardId) {

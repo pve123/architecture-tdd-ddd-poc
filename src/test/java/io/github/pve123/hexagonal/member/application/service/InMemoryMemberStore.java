@@ -8,9 +8,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -35,6 +37,18 @@ class InMemoryMemberStore implements MemberQueryPort, MemberCommandPort {
     @Override
     public Optional<Member> findById(String memberId) {
         return Optional.ofNullable(members.get(memberId));
+    }
+
+    @Override
+    public List<Member> findAllByIds(Collection<String> memberIds) {
+        return memberIds.stream().map(members::get).filter(Objects::nonNull).toList();
+    }
+
+    @Override
+    public Optional<Member> findActiveByEmail(String email) {
+        return members.values().stream()
+                .filter(member -> member.getEmail().equals(email) && !member.isDeleted())
+                .findFirst();
     }
 
     @Override
