@@ -15,11 +15,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class BoardRestControllerTest extends ApiTestSupport {
 
+    private String writerId;
     private String writerToken;
 
     @BeforeEach
     void setUp() throws Exception {
-        writerToken = signUpAndLogin("writer@example.com");
+        writerId = signUp("writer@example.com");
+        writerToken = login("writer@example.com");
     }
 
     @Test
@@ -30,7 +32,7 @@ class BoardRestControllerTest extends ApiTestSupport {
                         {"title": "가입인사", "content": "반갑습니다.", "memberId": "%s"}
                         """.formatted(otherId)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.member.email").value("writer@example.com"));
+                .andExpect(jsonPath("$.author.id").value(writerId));
     }
 
     @Test

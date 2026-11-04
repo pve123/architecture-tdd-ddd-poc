@@ -35,6 +35,11 @@ class HexagonalArchitectureTest {
             .should().dependOnClassesThat().resideInAPackage("..adapter..");
 
     @ArchTest
+    static final ArchRule 게시판의_웹_어댑터는_회원_컨텍스트를_모른다 = noClasses()
+            .that().resideInAPackage("..board.adapter.in..")
+            .should().dependOnClassesThat().resideInAPackage("..member..");
+
+    @ArchTest
     static final ArchRule 게시판은_회원의_도메인과_저장소를_직접_쓰지_않는다 = noClasses()
             .that().resideInAPackage("..board..")
             .should().dependOnClassesThat().resideInAnyPackage(

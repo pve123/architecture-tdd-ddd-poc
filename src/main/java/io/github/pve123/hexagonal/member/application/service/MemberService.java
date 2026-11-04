@@ -4,6 +4,7 @@ import io.github.pve123.hexagonal.common.error.BusinessException;
 import io.github.pve123.hexagonal.member.application.port.in.CheckActiveMemberUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.CreateMemberUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.DeleteMemberUseCase;
+import io.github.pve123.hexagonal.member.application.port.in.GetMemberProfilesUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.GetMemberUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.GetMembersUseCase;
 import io.github.pve123.hexagonal.member.application.port.in.LoginUseCase;
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * 회원 유스케이스를 처리합니다.
@@ -31,7 +34,8 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MemberService implements CreateMemberUseCase, GetMemberUseCase, GetMembersUseCase,
-        UpdateMemberUseCase, DeleteMemberUseCase, CheckActiveMemberUseCase, LoginUseCase {
+        UpdateMemberUseCase, DeleteMemberUseCase, CheckActiveMemberUseCase, LoginUseCase,
+        GetMemberProfilesUseCase {
 
     private final MemberQueryPort memberQueryPort;
     private final MemberCommandPort memberCommandPort;
@@ -91,6 +95,13 @@ public class MemberService implements CreateMemberUseCase, GetMemberUseCase, Get
                 .filter(found -> passwordEncoder.matches(command.rawPassword(), found.getPassword()))
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.LOGIN_FAILED));
         return tokenIssuerPort.issue(member.getId(), member.getRole());
+    }
+
+    @Override
+    public List<Profile> getProfiles(Collection<String> memberIds) {
+        return memberQueryPort.findAllByIds(memberIds).stream()
+                .map(member -> new Profile(member.getId(), member.getName(), member.isDeleted()))
+                .toList();
     }
 
     @Override
