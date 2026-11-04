@@ -60,7 +60,7 @@ class BoardPersistenceAdapterTest extends TestContainerConfig {
     void 지운_글은_조회와_목록과_개수에서_빠진다() {
         adapter.save(Board.write(MEMBER_ID, "남을 글", "내용"));
         Board deleted = adapter.save(Board.write(MEMBER_ID, "지울 글", "내용"));
-        deleted.delete(LocalDateTime.of(2026, 1, 1, 12, 0));
+        deleted.delete(MEMBER_ID, LocalDateTime.of(2026, 1, 1, 12, 0));
         adapter.save(deleted);
 
         assertThat(adapter.findActiveById(deleted.getId())).isEmpty();

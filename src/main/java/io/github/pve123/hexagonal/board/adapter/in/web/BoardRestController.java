@@ -69,11 +69,11 @@ public class BoardRestController {
         return toResponse(updateBoardUseCase.updateBoard(request.toCommand(boardId, memberId)));
     }
 
-    @Operation(summary = "게시글 지우기")
+    @Operation(summary = "게시글 지우기", description = "글쓴이만 지울 수 있습니다.")
     @DeleteMapping("/{boardId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteBoard(@PathVariable String boardId) {
-        deleteBoardUseCase.deleteBoard(boardId);
+    public void deleteBoard(@AuthenticationPrincipal String memberId, @PathVariable String boardId) {
+        deleteBoardUseCase.deleteBoard(boardId, memberId);
     }
 
     // TODO: 목록에서 글마다 회원을 따로 조회한다(N+1). 다음 커밋에서 글쓴이를 한 번에 모아 조회하도록 바꾼다.

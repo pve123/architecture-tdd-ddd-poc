@@ -60,9 +60,9 @@ public class BoardService implements CreateBoardUseCase, GetBoardUseCase, GetBoa
 
     @Override
     @Transactional
-    public void deleteBoard(String boardId) {
+    public void deleteBoard(String boardId, String requesterId) {
         Board board = findActiveBoard(boardId);
-        board.delete(LocalDateTime.now(clock));
+        board.delete(requesterId, LocalDateTime.now(clock));
         boardCommandPort.save(board);
     }
 

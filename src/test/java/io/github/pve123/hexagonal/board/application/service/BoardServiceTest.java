@@ -73,7 +73,7 @@ class BoardServiceTest {
     void 지운_글은_다시_찾을_수_없다() {
         Board board = boardService.createBoard(new CreateBoardUseCase.Command(WRITER_ID, "제목", "내용"));
 
-        boardService.deleteBoard(board.getId());
+        boardService.deleteBoard(board.getId(), WRITER_ID);
 
         assertThatThrownBy(() -> boardService.getBoard(board.getId()))
                 .hasMessage(BoardErrorCode.POST_NOT_FOUND.message());
